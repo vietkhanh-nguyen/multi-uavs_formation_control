@@ -1,0 +1,185 @@
+import numpy as np
+
+class QuadcopterPIDController:
+
+    def __init__(self, time_step):
+        self.cal_de = True
+        self.dt = time_step
+
+        # Position Control PID (for roll & pitch references)
+        self.Kp_pos = .1
+        self.Ki_pos = 0
+        self.Kd_pos = .35
+        self.int_pos = np.array([0.0, 0.0])
+        self.prev_e_pos = None
+        self.prev_de_pos = None
+
+        # Velocity Control PID (for roll & pitch references)
+        self.Kp_vel = .2
+        self.Ki_vel = 0
+        self.Kd_vel = 0
+        self.int_vel = np.array([0.0, 0.0])
+        self.prev_e_vel = None
+        self.prev_de_vel = None
+
+        # Thrust PID
+        self.vehicle_mass_offset = 3.25
+        self.Kp_t = 2
+        self.Ki_t = 0
+        self.Kd_t = 5
+        self.int_t = 0
+        self.prev_e_t = None
+        self.prev_de_t = None
+
+        # Roll PID
+        self.Kp_r = 5
+        self.Ki_r = 0
+        self.Kd_r = 2.5
+        self.int_r = 0
+        self.prev_e_r = None
+        self.prev_de_r = None
+
+        # Pitch PID
+        self.Kp_p = 5
+        self.Ki_p = 0
+        self.Kd_p = 2.5
+        self.int_p = 0
+        self.prev_e_p = None
+        self.prev_de_p = None
+
+        # Yaw PID
+        self.Kp_y = 1
+        self.Ki_y = 0
+        self.Kd_y = 10
+        self.int_y = 0
+        self.prev_e_y = None
+        self.prev_de_y = None
+
+    def normalize_angle(self, angle):
+        return (angle + np.pi) % (2 * np.pi) - np.pi
+
+    def low_pass_filter(self, raw_de, pre_de, alpha = 0.1):
+        return (1 - alpha)*pre_de + alpha*raw_de
+
+    def roll_controller(self, e):
+        e = self.normalize_angle(e)
+        if self.prev_e_r is None:
+            self.prev_e_r = e
+            self.prev_de_r = np.zeros_like(e)
+        de = (e - self.prev_e_r) / self.dt
+        self.int_r += e * self.dt
+        self.prev_e_r = e
+        self.prev_de_r = de
+        return self.Kp_r * e + self.Ki_r * self.int_r + self.Kd_r * de
+
+    def pitch_controller(self, e):
+        e = self.normalize_angle(e)
+        if self.prev_e_p is None:
+            self.prev_e_p = e
+            self.prev_de_p = np.zeros_like(e)
+        de = (e - self.prev_e_p) / self.dt
+        self.int_p += e * self.dt
+        self.prev_e_p = e
+        self.prev_de_p = de
+        return self.Kp_p * e + self.Ki_p * self.int_p + self.Kd_p * de
+
+    def yaw_controller(self, e):
+        e = self.normalize_angle(e)
+        if self.prev_e_y is None:
+            self.prev_e_y = e
+            self.prev_de_y = np.zeros_like(e)
+        raw_de = (e - self.prev_e_y) / self.dt
+        de = self.low_pass_filter(raw_de, self.prev_de_y)
+        self.int_y += e * self.dt
+        self.prev_e_y = e
+        self.prev_de_y = de
+        return self.Kp_y * e + self.Ki_y * self.int_y + self.Kd_y * de
+
+    def thrust_controller(self, e):
+        if self.prev_e_t is None:
+            self.prev_e_t = e
+            self.prev_de_t = np.zeros_like(e)
+        raw_de = (e - self.prev_e_t) / self.dt
+        de = self.low_pass_filter(raw_de, self.prev_de_t)
+        self.int_t += e * self.dt
+        self.prev_e_t = e
+        self.prev_de_t = de
+        return self.vehicle_mass_offset + self.Kp_t * e + self.Ki_t * self.int_t + self.Kd_t * de
+
+    def position_controller(self, e):
+        e[1] = -e[1]
+        if self.prev_e_pos is None:
+            self.prev_e_pos = e
+            self.prev_de_pos = np.zeros_like(e)
+        raw_de = (e - self.prev_e_pos) / self.dt
+        de = self.low_pass_filter(raw_de, self.prev_de_pos)
+        self.int_pos += e * self.dt
+        self.prev_e_pos = e
+        self.prev_de_pos = de
+        out = self.Kp_pos * e + self.Ki_pos * self.int_pos + self.Kd_pos * de
+        return out  # [pitch_ref, roll_ref]
+    
+    def velocity_controller(self, e):
+        e[1] = -e[1]
+        if self.prev_e_vel is None:
+            self.prev_e_vel = e
+            self.prev_de_vel = np.zeros_like(e)
+        raw_de = (e - self.prev_e_vel) / self.dt
+        de = self.low_pass_filter(raw_de, self.prev_de_vel, alpha=0.3)
+        self.int_vel += e * self.dt
+        self.prev_e_vel = e
+        self.prev_de_vel = de
+        out = self.Kp_vel * e + self.Ki_vel * self.int_vel + self.Kd_vel * de
+        return out  # [pitch_ref, roll_ref]
+
+    def motor_mixing_algorithm(self, t, r, p, y):
+        m1 = t - r + p - y
+        m2 = t + r + p + y
+        m3 = t + r - p - y
+        m4 = t - r - p + y
+        return m1, m2, m3, m4
+
+    def pos_control_algorithm(self, state, pos_ref, yaw_ref=None):
+        state = np.array(state)
+        x, y, z, roll, pitch, yaw, v_x, v_y, v_z, v_roll, v_pitch, v_yaw = state
+        x_ref, y_ref, z_ref = pos_ref.flatten()
+        position_ref = np.array([x_ref, y_ref])
+        altitude_ref = z_ref
+
+        # Generate roll and pitch reference from position error
+        pos_error_world = position_ref - np.array([x, y])
+        yaw = self.normalize_angle(yaw)
+        R_world_to_body = np.array([
+            [np.cos(yaw), np.sin(yaw)],
+            [-np.sin(yaw), np.cos(yaw)]
+        ])
+        pos_error_body = R_world_to_body @ pos_error_world
+        pitch_ref, roll_ref  = self.position_controller(pos_error_body)
+        u_thrust = self.thrust_controller(altitude_ref - z)
+        u_roll = self.roll_controller(roll_ref - roll)
+        u_pitch = self.pitch_controller(pitch_ref - pitch)
+        u_yaw = self.yaw_controller(yaw_ref-yaw) if yaw_ref is not None else self.yaw_controller(-yaw)
+        return self.motor_mixing_algorithm(u_thrust, u_roll, u_pitch, u_yaw)
+    
+
+    def vel_control_algorithm(self, state, vel_ref, altitude_ref, yaw_ref=None):
+        state = np.array(state)
+        x, y, z, roll, pitch, yaw, v_x, v_y, v_z, v_roll, v_pitch, v_yaw = state
+        velocity_ref = vel_ref
+
+        # Generate roll and pitch reference from position error
+        vel_error_world = velocity_ref - np.array([v_x, v_y])
+        yaw = self.normalize_angle(yaw)
+        R_world_to_body = np.array([
+            [np.cos(yaw), np.sin(yaw)],
+            [-np.sin(yaw), np.cos(yaw)]
+        ])
+        vel_error_body = R_world_to_body @ vel_error_world
+        pitch_ref, roll_ref = self.velocity_controller(vel_error_body)
+        u_thrust = self.thrust_controller(altitude_ref - z)
+        u_roll = self.roll_controller(roll_ref - roll)
+        u_pitch = self.pitch_controller(pitch_ref - pitch)
+        u_yaw = self.yaw_controller(yaw_ref-yaw) if yaw_ref is not None else self.yaw_controller(-yaw)
+        control_signal = np.array([u_thrust, u_roll, u_pitch, u_yaw])
+        print([f"{u:.3f}" for u in control_signal])
+        return self.motor_mixing_algorithm(u_thrust, u_roll, u_pitch, u_yaw)
