@@ -2,6 +2,35 @@ import rvo2
 
 import numpy as np
 
+class PIDController:
+
+    def __init__(self, Kp, Ki, Kd, time_step):
+        
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.int = 0
+        self.dt = time_step
+        self.prev_e = None
+        self.prev_de = None
+
+    def low_pass_filter(self, raw_de, pre_de):
+        alpha = 0.2
+        return (1 - alpha)*pre_de + alpha*raw_de
+
+    def algorithm(self, e, raw_de=None):
+        if self.prev_e is None:
+            self.prev_e = e
+            self.prev_de = np.zeros_like(e)
+        if raw_de is None:
+            raw_de = (e - self.prev_e) / self.dt
+        de = self.low_pass_filter(raw_de, self.prev_de)
+        self.int = np.clip(self.int + e * self.dt, -200, 200)
+
+        self.prev_e = e
+        self.prev_de = de
+        return self.Kp * e + self.Ki * self.int + self.Kd * de
+
 class LeaderFollowerController:
 
     def __init__(self, time_step, offset):
@@ -56,11 +85,12 @@ class LeaderFollowerController:
         self.safety_space = 0.2
         self.neighbor_dist = 5
         self.max_neighbors = 10
-        self.time_horizon = 1
-        self.time_horizon_obst = 1
+        self.time_horizon = 2
+        self.time_horizon_obst = 2
         self.radius = 0.4
         self.time_step = time_step
-        self.max_speed = 1
+        self.max_speed = 2
+        self.controllers = []
         self.sim = None
 
     def rotate(self, follower_offset, leader_yaw):
@@ -83,22 +113,33 @@ class LeaderFollowerController:
         # agent_state = [agent_pos_x, agent_pos_y, agent_vel_x, agent_vel_y]
         # agent_offset = [agent_offset_x, agent_offset_y]
         all_agent_state = [tuple(arr.tolist()) for arr in all_agent_state]
+        leader_state = all_agent_state[0]
         if self.sim is None:
             params = self.neighbor_dist, self.max_neighbors, self.time_horizon, self.time_horizon_obst
             self.sim = rvo2.PyRVOSimulator(self.time_step, *params, self.radius, self.max_speed)
             for i, agent_state in enumerate(all_agent_state):
                 self.sim.addAgent(agent_state[0:2], *params, self.radius + self.safety_space,
                                   self.max_speed, agent_state[6:8])
+            Kp = 1.0
+            Ki = 0.5
+            Kd = 2.0
+            for i in range(len(all_agent_state)):
+                controller = PIDController(Kp, Ki, Kd, self.time_step)
+                self.controllers.append(controller)
         else:
             for i, agent_state in enumerate(all_agent_state):
                 self.sim.setAgentPosition(i, agent_state[0:2])
+                # relative_vel = tuple(np.array(agent_state[6:8]) - np.array(leader_state[6:8]))
                 self.sim.setAgentVelocity(i, agent_state[6:8])
+                # self.sim.setAgentVelocity(i, relative_vel)
 
-        all_agent_offset = self.cal_all_agent_offset(all_agent_state[0])
+        all_agent_offset = self.cal_all_agent_offset(leader_state)
         i = 0
         for agent_state, agent_offset in zip(all_agent_state, all_agent_offset):
             # unknown goal position of other humans
-            velocity = np.array([agent_offset[0] - agent_state[0], agent_offset[1] - agent_state[1]])
+            error = np.array([agent_offset[0] - agent_state[0], agent_offset[1] - agent_state[1]])
+
+            velocity = self.controllers[i].algorithm(error, -np.array(agent_state[6:8]))
             speed = np.linalg.norm(velocity)
             pref_vel = velocity / speed * self.max_speed if speed > self.max_speed  else velocity
             self.sim.setAgentPrefVelocity(i, tuple(pref_vel))

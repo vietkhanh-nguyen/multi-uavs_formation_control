@@ -168,10 +168,10 @@ class MujocoSim:
                 self.controllers.append(controller)
             print(len(self.controllers))
             offsets = [
-                np.array([2.0, -1.0]),
-                np.array([2.0,  1.0]),
-                np.array([4.0, -2.0]),
-                np.array([4.0,  2.0]),
+                np.array([-2.0, -1.0]),
+                np.array([-2.0,  1.0]),
+                np.array([-4.0, -2.0]),
+                np.array([-4.0,  2.0]),
             ]
             self.formation_controller = LeaderFollowerController(self.time_step, offsets)
 
@@ -200,7 +200,6 @@ class MujocoSim:
                     pos_ref[2] = height_ref
                 
                 control_input = self.controllers[id].pos_control_algorithm(state, pos_ref)
-                print(pos_ref)
                 for j in range(1, 5):
                     actuator_name = f"thrust{j}_{id}"
                     self.data.actuator(actuator_name).ctrl = control_input[j-1]

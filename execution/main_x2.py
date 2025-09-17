@@ -172,7 +172,7 @@ class MujocoSim:
                 self.yaw_ref += np.clip(diff, -angle_step, angle_step)
                 self.yaw_ref = normalize_angle(self.yaw_ref)
 
-        max_speed = 2
+        max_speed = 1.5
         if glfw.get_key(window, glfw.KEY_LEFT) == glfw.PRESS:
             self.vy_ref = np.clip(self.vy_ref + step, -max_speed, max_speed)
             self.y_ref = self.y_ref + step
@@ -187,9 +187,9 @@ class MujocoSim:
             self.vx_ref = np.clip(self.vx_ref - step, -max_speed, max_speed)
             self.x_ref = self.x_ref - step
 
-        if glfw.get_key(window, glfw.KEY_KP_ADD) == glfw.PRESS:
+        if glfw.get_key(window, glfw.KEY_PERIOD) == glfw.PRESS:
             self.z_ref = np.clip(self.z_ref + step, 0, 3)
-        elif glfw.get_key(window, glfw.KEY_KP_SUBTRACT) == glfw.PRESS:
+        elif glfw.get_key(window, glfw.KEY_COMMA) == glfw.PRESS:
             self.z_ref = np.clip(self.z_ref - step, 0, 3)
 
         if glfw.get_key(window, glfw.KEY_KP_0) == glfw.PRESS:
@@ -197,17 +197,6 @@ class MujocoSim:
             self.vy_ref = 0
 
         # Yaw control targets
-        yaw_targets = {
-            glfw.KEY_Q: 3 * np.pi / 4,
-            glfw.KEY_W: np.pi / 2,
-            glfw.KEY_E: np.pi / 4,
-            glfw.KEY_A: np.pi,
-            glfw.KEY_D: 0,
-            glfw.KEY_C: -np.pi / 4,
-            glfw.KEY_X: -np.pi / 2,
-            glfw.KEY_Z: -3 * np.pi / 4,
-        }
-
         yaw_targets = {
             glfw.KEY_Q: np.pi / 4,
             glfw.KEY_W: 0,
@@ -318,8 +307,8 @@ class MujocoSim:
             
             self.pos_ref = np.array([self.x_ref, self.y_ref, self.z_ref])
             # self.vel_ref = np.array([self.vx_ref, self.vy_ref])
-            self.data.ctrl = self.controller.pos_control_algorithm(self.state, self.keyboard_input_ref[:3], self.yaw_ref)
-            # self.data.ctrl = self.controller.vel_control_algorithm(self.state, self.keyboard_input_ref[3:5], self.keyboard_input_ref[2], self.yaw_ref)
+            # self.data.ctrl = self.controller.pos_control_algorithm(self.state, self.keyboard_input_ref[:3], self.yaw_ref)
+            self.data.ctrl = self.controller.vel_control_algorithm(self.state, self.keyboard_input_ref[3:5], self.keyboard_input_ref[2], self.yaw_ref)
 
             self.temp = euler
             self.counter += 1
