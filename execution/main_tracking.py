@@ -165,7 +165,9 @@ class MujocoSim:
             path = path_finding()
             if path is None:
                 path = self.pos_ref
-            self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=path)
+            self.path_tracking = PurePursuit(look_ahead_dist=5, waypoints=path)
+            self.tracking_flag = False
+            self.altitude_ref_init = 5
 
         def controller(model, data):
             #put the controller here. This function is called inside the simulation.]\
@@ -180,10 +182,20 @@ class MujocoSim:
             euler = self.quat2euler(body_quat)
             self.state = np.concatenate([body_pos, euler, vel])
 
-            pos_ref = self.path_tracking.look_ahead_point(body_pos)
+            
+            self.cam.lookat = body_pos 
+
+            if np.abs(body_pos[2] - self.altitude_ref_init) < 0.05:
+                self.tracking_flag = True
+
+            if self.tracking_flag:
+                pos_ref = self.path_tracking.look_ahead_point(body_pos)
+            else:
+                pos_ref = body_pos
+                pos_ref[2] = self.altitude_ref_init
             self.data.ctrl = self.controller.pos_control_algorithm(self.state, pos_ref, self.yaw_ref)
 
-            self.cam.lookat = body_pos 
+            
             # self.cam.azimuth = np.degrees(euler[2])
 
             # Get position from data.sensordata
@@ -240,7 +252,7 @@ class MujocoSim:
 
 if __name__ == "__main__":
     xml_path = '../mjcf/scene.xml' #xml file (assumes this is in the same folder as this file)
-    simulation_time = 10 #simulation time
+    simulation_time = 100 #simulation time
     build_map_summary()
     sim = MujocoSim(xml_path, simulation_time, fps=60)
     sim.main_loop()

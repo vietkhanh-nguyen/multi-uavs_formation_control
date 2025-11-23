@@ -188,6 +188,86 @@
       <site name="thrust4_7" pos=".14 -.18 .08"/>
     </body>
     
+
+    <body name="x2_8" pos="6.0 2.0 0.3" childclass="x2">
+      <freejoint/>
+      <site name="imu_8" pos="0 0 .02"/>
+      <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .02"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .06"/>
+      <geom class="collision" size=".05 .027 .02" pos="-.07 0 .065"/>
+      <geom class="collision" size=".023 .017 .01" pos="-.137 .008 .065" quat="1 0 0 1"/>
+      <geom name="rotor1_8" class="rotor" pos="-.14 -.18 .05" mass=".25"/>
+      <geom name="rotor2_8" class="rotor" pos="-.14 .18 .05" mass=".25"/>
+      <geom name="rotor3_8" class="rotor" pos=".14 .18 .08" mass=".25"/>
+      <geom name="rotor4_8" class="rotor" pos=".14 -.18 .08" mass=".25"/>
+      <geom size=".16 .04 .02" pos="0 0 0.02" type="ellipsoid" mass=".325" class="visual" material="invisible"/>
+      <site name="thrust1_8" pos="-.14 -.18 .05"/>
+      <site name="thrust2_8" pos="-.14 .18 .05"/>
+      <site name="thrust3_8" pos=".14 .18 .08"/>
+      <site name="thrust4_8" pos=".14 -.18 .08"/>
+    </body>
+    
+
+    <body name="x2_9" pos="8.0 2.0 0.3" childclass="x2">
+      <freejoint/>
+      <site name="imu_9" pos="0 0 .02"/>
+      <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .02"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .06"/>
+      <geom class="collision" size=".05 .027 .02" pos="-.07 0 .065"/>
+      <geom class="collision" size=".023 .017 .01" pos="-.137 .008 .065" quat="1 0 0 1"/>
+      <geom name="rotor1_9" class="rotor" pos="-.14 -.18 .05" mass=".25"/>
+      <geom name="rotor2_9" class="rotor" pos="-.14 .18 .05" mass=".25"/>
+      <geom name="rotor3_9" class="rotor" pos=".14 .18 .08" mass=".25"/>
+      <geom name="rotor4_9" class="rotor" pos=".14 -.18 .08" mass=".25"/>
+      <geom size=".16 .04 .02" pos="0 0 0.02" type="ellipsoid" mass=".325" class="visual" material="invisible"/>
+      <site name="thrust1_9" pos="-.14 -.18 .05"/>
+      <site name="thrust2_9" pos="-.14 .18 .05"/>
+      <site name="thrust3_9" pos=".14 .18 .08"/>
+      <site name="thrust4_9" pos=".14 -.18 .08"/>
+    </body>
+    
+
+    <body name="x2_10" pos="0.0 4.0 0.3" childclass="x2">
+      <freejoint/>
+      <site name="imu_10" pos="0 0 .02"/>
+      <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .02"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .06"/>
+      <geom class="collision" size=".05 .027 .02" pos="-.07 0 .065"/>
+      <geom class="collision" size=".023 .017 .01" pos="-.137 .008 .065" quat="1 0 0 1"/>
+      <geom name="rotor1_10" class="rotor" pos="-.14 -.18 .05" mass=".25"/>
+      <geom name="rotor2_10" class="rotor" pos="-.14 .18 .05" mass=".25"/>
+      <geom name="rotor3_10" class="rotor" pos=".14 .18 .08" mass=".25"/>
+      <geom name="rotor4_10" class="rotor" pos=".14 -.18 .08" mass=".25"/>
+      <geom size=".16 .04 .02" pos="0 0 0.02" type="ellipsoid" mass=".325" class="visual" material="invisible"/>
+      <site name="thrust1_10" pos="-.14 -.18 .05"/>
+      <site name="thrust2_10" pos="-.14 .18 .05"/>
+      <site name="thrust3_10" pos=".14 .18 .08"/>
+      <site name="thrust4_10" pos=".14 -.18 .08"/>
+    </body>
+    
+
+    <body name="x2_11" pos="2.0 4.0 0.3" childclass="x2">
+      <freejoint/>
+      <site name="imu_11" pos="0 0 .02"/>
+      <geom material="phong3SG" mesh="X2_lowpoly" class="visual" quat="0 0 1 1"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .02"/>
+      <geom class="collision" size=".06 .027 .02" pos=".04 0 .06"/>
+      <geom class="collision" size=".05 .027 .02" pos="-.07 0 .065"/>
+      <geom class="collision" size=".023 .017 .01" pos="-.137 .008 .065" quat="1 0 0 1"/>
+      <geom name="rotor1_11" class="rotor" pos="-.14 -.18 .05" mass=".25"/>
+      <geom name="rotor2_11" class="rotor" pos="-.14 .18 .05" mass=".25"/>
+      <geom name="rotor3_11" class="rotor" pos=".14 .18 .08" mass=".25"/>
+      <geom name="rotor4_11" class="rotor" pos=".14 -.18 .08" mass=".25"/>
+      <geom size=".16 .04 .02" pos="0 0 0.02" type="ellipsoid" mass=".325" class="visual" material="invisible"/>
+      <site name="thrust1_11" pos="-.14 -.18 .05"/>
+      <site name="thrust2_11" pos="-.14 .18 .05"/>
+      <site name="thrust3_11" pos=".14 .18 .08"/>
+      <site name="thrust4_11" pos=".14 -.18 .08"/>
+    </body>
+    
   </worldbody>
 
   <actuator>
@@ -238,6 +318,30 @@
     <motor class="x2" name="thrust2_7" site="thrust2_7" gear="0 0 1 0 0  .0201"/>
     <motor class="x2" name="thrust3_7" site="thrust3_7" gear="0 0 1 0 0 -.0201"/>
     <motor class="x2" name="thrust4_7" site="thrust4_7" gear="0 0 1 0 0  .0201"/>
+    
+
+    <motor class="x2" name="thrust1_8" site="thrust1_8" gear="0 0 1 0 0 -.0201"/>
+    <motor class="x2" name="thrust2_8" site="thrust2_8" gear="0 0 1 0 0  .0201"/>
+    <motor class="x2" name="thrust3_8" site="thrust3_8" gear="0 0 1 0 0 -.0201"/>
+    <motor class="x2" name="thrust4_8" site="thrust4_8" gear="0 0 1 0 0  .0201"/>
+    
+
+    <motor class="x2" name="thrust1_9" site="thrust1_9" gear="0 0 1 0 0 -.0201"/>
+    <motor class="x2" name="thrust2_9" site="thrust2_9" gear="0 0 1 0 0  .0201"/>
+    <motor class="x2" name="thrust3_9" site="thrust3_9" gear="0 0 1 0 0 -.0201"/>
+    <motor class="x2" name="thrust4_9" site="thrust4_9" gear="0 0 1 0 0  .0201"/>
+    
+
+    <motor class="x2" name="thrust1_10" site="thrust1_10" gear="0 0 1 0 0 -.0201"/>
+    <motor class="x2" name="thrust2_10" site="thrust2_10" gear="0 0 1 0 0  .0201"/>
+    <motor class="x2" name="thrust3_10" site="thrust3_10" gear="0 0 1 0 0 -.0201"/>
+    <motor class="x2" name="thrust4_10" site="thrust4_10" gear="0 0 1 0 0  .0201"/>
+    
+
+    <motor class="x2" name="thrust1_11" site="thrust1_11" gear="0 0 1 0 0 -.0201"/>
+    <motor class="x2" name="thrust2_11" site="thrust2_11" gear="0 0 1 0 0  .0201"/>
+    <motor class="x2" name="thrust3_11" site="thrust3_11" gear="0 0 1 0 0 -.0201"/>
+    <motor class="x2" name="thrust4_11" site="thrust4_11" gear="0 0 1 0 0  .0201"/>
     
   </actuator>
 
@@ -297,6 +401,34 @@
     <framepos name="pos_7" objtype="site" objname="imu_7"/>
     <framequat name="quat_7" objtype="site" objname="imu_7"/>
     <framelinvel name="vel_7" objtype="site" objname="imu_7"/>
+    
+
+    <gyro name="gyro_8" site="imu_8"/>
+    <accelerometer name="acc_8" site="imu_8"/>
+    <framepos name="pos_8" objtype="site" objname="imu_8"/>
+    <framequat name="quat_8" objtype="site" objname="imu_8"/>
+    <framelinvel name="vel_8" objtype="site" objname="imu_8"/>
+    
+
+    <gyro name="gyro_9" site="imu_9"/>
+    <accelerometer name="acc_9" site="imu_9"/>
+    <framepos name="pos_9" objtype="site" objname="imu_9"/>
+    <framequat name="quat_9" objtype="site" objname="imu_9"/>
+    <framelinvel name="vel_9" objtype="site" objname="imu_9"/>
+    
+
+    <gyro name="gyro_10" site="imu_10"/>
+    <accelerometer name="acc_10" site="imu_10"/>
+    <framepos name="pos_10" objtype="site" objname="imu_10"/>
+    <framequat name="quat_10" objtype="site" objname="imu_10"/>
+    <framelinvel name="vel_10" objtype="site" objname="imu_10"/>
+    
+
+    <gyro name="gyro_11" site="imu_11"/>
+    <accelerometer name="acc_11" site="imu_11"/>
+    <framepos name="pos_11" objtype="site" objname="imu_11"/>
+    <framequat name="quat_11" objtype="site" objname="imu_11"/>
+    <framelinvel name="vel_11" objtype="site" objname="imu_11"/>
     
   </sensor>
 </mujoco>

@@ -15,7 +15,7 @@ class QuadcopterPIDController:
         self.prev_de_pos = None
 
         # Velocity Control PID (for roll & pitch references)
-        self.Kp_vel = .2
+        self.Kp_vel = .1
         self.Ki_vel = 0
         self.Kd_vel = 0
         self.int_vel = np.array([0.0, 0.0])
@@ -164,7 +164,7 @@ class QuadcopterPIDController:
         u_roll = self.roll_controller(roll_ref - roll)
         u_pitch = self.pitch_controller(pitch_ref - pitch)
         u_yaw = self.yaw_controller(yaw_ref-yaw) if yaw_ref is not None else self.yaw_controller(-yaw)
-        return self.motor_mixing_algorithm(u_thrust, u_roll, u_pitch, u_yaw)
+        return np.array(self.motor_mixing_algorithm(u_thrust, u_roll, u_pitch, u_yaw))
     
 
     def vel_control_algorithm(self, state, vel_ref, altitude_ref, yaw_ref=None):
@@ -185,4 +185,4 @@ class QuadcopterPIDController:
         u_roll = self.roll_controller(roll_ref - roll)
         u_pitch = self.pitch_controller(pitch_ref - pitch)
         u_yaw = self.yaw_controller(yaw_ref-yaw) if yaw_ref is not None else self.yaw_controller(-yaw)
-        return self.motor_mixing_algorithm(u_thrust, u_roll, u_pitch, u_yaw)
+        return np.array(self.motor_mixing_algorithm(u_thrust, u_roll, u_pitch, u_yaw))

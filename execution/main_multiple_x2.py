@@ -8,9 +8,11 @@ import numpy as np
 import os
 from controls.quadcopter_controller import QuadcopterPIDController
 from controls.consensus_controller import MultiAgentConsensus
+from controls.pure_pursuit import PurePursuit
 from scipy.spatial.transform import Rotation 
 import matplotlib.pyplot as plt
 from scripts.multiple_drone_generate import save_multi_drone_xml
+from path_planning.a_star_search import path_finding
 
 class MujocoSim:
 
@@ -37,7 +39,7 @@ class MujocoSim:
         self.temp = None
 
         # Print camera config
-        self.print_camera_config = True #set to True to print camera config
+        self.print_camera_config = False #set to True to print camera config
                                          #this is useful for initializing view of the model)
 
         # Receive key input
@@ -50,8 +52,7 @@ class MujocoSim:
         self.counter = 0
         self.num_drones = num_drones
 
-        self.controllers = []
-        self.formation_controller = MultiAgentConsensus(self.num_drones, K=.1)
+        
 
 
     def set_up_ui(self):
@@ -165,31 +166,40 @@ class MujocoSim:
         
 
         def init_controller(model,data):
+            path = path_finding()
+            if path is None:
+                path = self.pos_ref
+            self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=path)
+            self.controllers = []
+            self.formation_controller = MultiAgentConsensus(self.num_drones, K=1)
             for i in range(self.num_drones):
                 controller = QuadcopterPIDController(self.time_step)
                 self.controllers.append(controller)
-
+            self.controllers.append(QuadcopterPIDController(self.time_step))
+            self.tracking_flag = False
+            self.altitude_ref = 5*np.ones(self.num_drones)
             pass
 
 
         def controller(model, data):
             #put the controller here. This function is called inside the simulation.]\
-            height_ref = 4
 
             X = np.zeros((self.num_drones, 3))
-            start_formation_control = True
             for id in range(self.num_drones):
                 pos = np.array(self.data.sensor(f'pos_{id}').data)
                 X[id, :] = pos
-                if np.abs(pos[2] - height_ref) > 0.5:
-                    start_formation_control = False
+                if np.abs(pos[2] - self.altitude_ref[id]) < 0.05:
+                    self.tracking_flag = True
 
             self.cam.lookat = X.mean(axis=0)
-            print(self.cam.lookat)
-            if start_formation_control:
+
+            body_pos = np.array(self.data.sensor(f'pos_{0}').data)
+
+
+            if self.tracking_flag:
                 control_consensus = self.formation_controller.consensus_law(X)
             else:
-                control_consensus = np.zeros((self.num_drones, 2))
+                control_consensus = np.zeros((self.num_drones, 3))
 
             for id in range(self.num_drones):
                 body_pos = np.array(self.data.sensor(f'pos_{id}').data)
@@ -199,8 +209,20 @@ class MujocoSim:
                 vel = np.hstack((body_linvel, body_angvel))
                 euler = self.quat2euler(body_quat)
                 state = np.concatenate([body_pos, euler, vel])
-                # print(control_consensus[id, :])
-                control_input = self.controllers[id].vel_control_algorithm(state, control_consensus[id, :2], height_ref)
+                self.altitude_ref[id] += control_consensus[id, 2]*.01
+                control_input = self.controllers[id].vel_control_algorithm(state, control_consensus[id, :2], self.altitude_ref[id])
+                
+                if id == 0 and self.tracking_flag:
+                    
+                    pos_ref = self.path_tracking.look_ahead_point(body_pos)
+                    control_follow_path = np.zeros_like(control_input)
+                    control_follow_path = self.controllers[-1].pos_control_algorithm(state, pos_ref)
+                    control_input += 0*control_follow_path
+                    # print(np.array(control_follow_path).shape)
+                    # control_input = self.controllers[-1].pos_control_algorithm(state, pos_ref)
+                    # print(control_input)
+                    # print(body_pos)
+
                 for j in range(1, 5):
                     actuator_name = f"thrust{j}_{id}"
                     self.data.actuator(actuator_name).ctrl = control_input[j-1]
@@ -263,8 +285,8 @@ class MujocoSim:
 
 if __name__ == "__main__":
     xml_path = '../mjcf/scene_multiple_x2.xml'
-    simulation_time = 20 #simulation time
-    num_drones = 8
+    simulation_time = 1000 #simulation time
+    num_drones = 12
     save_multi_drone_xml("mjcf/multiple_x2.xml", num_drones=num_drones)
     sim = MujocoSim(xml_path, num_drones, simulation_time, fps=60)
     sim.main_loop()
