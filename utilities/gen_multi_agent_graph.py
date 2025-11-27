@@ -62,6 +62,16 @@ def gen_sphere(n_agents, dim_state,radius):
 
     return X_ref
 
+def gen_rectangle(n_agents, spacing=2.0, agents_per_row=3):
+    X_ref = np.zeros((n_agents, 3))
+
+    for i in range(n_agents):
+        x = (i % agents_per_row) * spacing
+        y = (i // agents_per_row) * spacing
+        X_ref[i, :3] = [x, y, 0]  # z = 0 plane
+
+    return X_ref
+
 def gen_icosahedron(radius):
     """
     Initialize X_ref using a regular Icosahedron (12 vertices).

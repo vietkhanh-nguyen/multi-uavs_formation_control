@@ -8,6 +8,7 @@ from scipy.ndimage import binary_dilation
 from path_planning.a_star_obj import OpenList, ClosedList, AStarNode, Stack, NodeGrid3D
 from path_planning.env import MapGridEnvironment3D
 from utilities.build_map import generate_city_environment
+from plots.my_plot import MyPlot
 
 class AStartSearch3D:
 
@@ -117,18 +118,18 @@ def path_finding():
     env = MapGridEnvironment3D(city["map_size"], city["resolution"], city["box_obs_list"])
     env.generate_voxel_map()
     a_star = AStartSearch3D(map_env=env)
-    start_pos = np.array([2.0, 2.0, 5.0])
+    start_pos = np.array([0.0, 0.0, 5.0])
     end_pos = np.array([60.0, 60.0, 15.0])
     if env.is_inside_box(start_pos) or env.is_inside_box(end_pos):
-        return False
+        return False, None
     a_star.define_start_end_node(start_pos, end_pos)
-    a_star.inflate_obstacles(1.0)
+    a_star.inflate_obstacles(3.0)
     path = a_star.search()
     if path is None:
-        return False
+        return False, None
     else:
         np.save("path_planning/astar_path.npy", path)
-        return path
+        return path, env
 
 if __name__ == "__main__":
 
@@ -136,12 +137,12 @@ if __name__ == "__main__":
     env = MapGridEnvironment3D(city["map_size"], city["resolution"], city["box_obs_list"])
     env.generate_voxel_map()
     a_star = AStartSearch3D(map_env=env)
-    start_pos = np.array([2.0, 2.0, 5.0])
+    start_pos = np.array([0.0, 0.0, 5.0])
     end_pos = np.array([60.0, 60.0, 15.0])
-    print(env.is_inside_box(start_pos))
-    print(env.is_inside_box(end_pos))
     a_star.define_start_end_node(start_pos, end_pos)
-    a_star.inflate_obstacles(1.0)
+    a_star.inflate_obstacles(3.0)
     path = a_star.search()
     np.save("path_planning/astar_path.npy", path)
-    env.plot_3d_map(elev=80, azim=45, waypoints=path)
+    myplot = MyPlot() 
+    myplot.plot_3d_map(city["box_obs_list"], city["map_size"], elev=25, azim=45, waypoints=path)
+    # print(path)

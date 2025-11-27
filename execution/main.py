@@ -12,12 +12,12 @@ from utilities.build_map import build_map_summary
 
 def mjc_sim_scenario_bearing_tracking_based():
     xml_path = '../mjcf/scene_multiple_x2.xml'
-    simulation_time = 1000 #simulation time
+    simulation_time = 360 #simulation time
     time_step = None
-    fps = 60
+    fps = 25
     num_drones = 12
     plot = None
-    render_video = False
+    render_video = True
     # build_map_summary()
     save_multi_drone_xml("mjcf/multiple_x2.xml", num_drones=num_drones)
     scenario = ScenarioBearingbasedTrackingConsensus()
@@ -31,7 +31,7 @@ def mjc_sim_scenario_bearing_tracking_based():
 
 def mjc_sim_scenario_bearing_based():
     xml_path = '../mjcf/scene_multiple_x2.xml'
-    simulation_time = 1000 #simulation time
+    simulation_time = 78 #simulation time
     time_step = None
     fps = 60
     num_drones = 12
@@ -49,9 +49,9 @@ def mjc_sim_scenario_bearing_based():
 
 def mjc_sim_scenario_drone_tracking():
     xml_path = '../mjcf/scene.xml' #xml file (assumes this is in the same folder as this file)
-    simulation_time = 70 #simulation time
+    simulation_time = 200 #simulation time
     time_step = None
-    fps = 60
+    fps = 25
     num_drones = 1
     render_video = False
     plot = None

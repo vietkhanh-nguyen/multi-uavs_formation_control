@@ -167,7 +167,7 @@ class MujocoSim:
         
 
         def init_controller(model,data):
-            path = path_finding()
+            path, env = path_finding()
             if path is None:
                 path = self.pos_ref
             self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=path)

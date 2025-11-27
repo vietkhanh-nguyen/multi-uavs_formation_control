@@ -7,7 +7,7 @@
     <!-- <rgba haze="0.15 0.25 0.35 1"/> -->
     <map haze=".5" zfar="100" znear="0.01"/>
     <rgba haze="0 0 0 0"/>
-    <global azimuth="-20" elevation="20" ellipsoidinertia="true"/>
+    <global azimuth="-20" elevation="20" ellipsoidinertia="true" offwidth="800" offheight="600"/>
   </visual>
 
   <asset>

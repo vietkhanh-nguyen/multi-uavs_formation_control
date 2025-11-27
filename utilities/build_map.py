@@ -4,7 +4,7 @@ def generate_city_environment(
     num_blocks_x=4,
     num_blocks_y=4,
     block_size=20,
-    road_width=1,
+    road_width=10,
     min_building_size=4,
     max_building_size=12,
     min_height=5,

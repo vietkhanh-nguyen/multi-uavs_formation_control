@@ -48,7 +48,7 @@ class MujocoRender:
     def main_loop(self):
 
         def init_controller(model, data):
-            self.scenario.init(self)
+            self.scenario.init(self, model, data)
 
         def controller(model, data):
             self.scenario.update(self, model, data)
@@ -61,7 +61,7 @@ class MujocoRender:
         #set the controller
         mj.set_mjcb_control(controller)
         self.scene = mj.MjvScene(self.model, maxgeom=10000)
-        with mj.Renderer(self.model, 480, 480) as renderer:
+        with mj.Renderer(self.model, 512, 512) as renderer:
             while self.data.time < self.simulation_time:
                 self.counter +=1
                 mj.mj_step(self.model, self.data)

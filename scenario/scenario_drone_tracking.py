@@ -22,12 +22,12 @@ class ScenarioDroneTracking:
         sim.cam.distance =  8.0
 
         # Plan path
-        path = path_finding()
+        path, env = path_finding()
         if path is None:
             path = sim.pos_ref  # fallback if path not found
 
         # Pure pursuit path tracker
-        self.path_tracking = PurePursuit(look_ahead_dist=5, waypoints=path)
+        self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=path)
 
         # PID controller for the drone
         self.controller = QuadcopterPIDController(sim.time_step)
@@ -69,6 +69,10 @@ class ScenarioDroneTracking:
         # Determine reference position
         if self.tracking_flag:
             pos_ref = self.path_tracking.look_ahead_point(body_pos)
+            print(
+                f"Pos_ref: {np.round(pos_ref, 2)}, "
+                f"Body_pos: {np.round(body_pos, 2)}"
+            )
         else:
             pos_ref = np.copy(body_pos)
             pos_ref[2] = self.altitude_ref_init

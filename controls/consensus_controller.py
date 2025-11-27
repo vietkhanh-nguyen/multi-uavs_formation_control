@@ -16,7 +16,7 @@ class MultiAgentConsensus:
     def __init__(self, n_agents=7, K=1, graph_type="complete", dim_state=3):
         self.n_agents = n_agents
         self.K = K/self.n_agents
-        self.impact_dis = 2
+        self.impact_dis = 1
         self.muy = (1 + self.impact_dis**4)/self.impact_dis**4
         # Initialize system matrices
         self.graph_type = graph_type
@@ -77,7 +77,7 @@ class MultiAgentConsensus:
                 e = dist_matrix[i, j]**2 - self.impact_dis**2
                 if e <= 0 and i != j:
                     dBij = (-4*self.muy*e)/(1 + e**2)**2 * diff_matrix[i, j, :]
-                    u[i] += dBij / (1 - self.muy*(e**2 / (1 + e**2)))
+                    u[i] += 2*dBij / (1 - self.muy*(e**2 / (1 + e**2)))
 
                 if self.A_graph[i, j] == 0:
                     continue  

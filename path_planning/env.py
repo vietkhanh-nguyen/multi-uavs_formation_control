@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import numpy as np
 import matplotlib.pyplot as plt
 from plots.my_plot import MyPlot
@@ -61,6 +65,94 @@ class MapGridEnvironment3D:
             ):
                 return True
         return False
+    
+    # compute closest point on a 3D box to a point in space
+    def closest_point_on_box(self, point, box):
+        px, py, pz = point
+        xmin, xmax, ymin, ymax, zmin, zmax = box
+
+        cx = np.clip(px, xmin, xmax)
+        cy = np.clip(py, ymin, ymax)
+        cz = np.clip(pz, zmin, zmax)
+
+        return np.array([cx, cy, cz])
+    
+    def closest_point_on_box_batch(self, points, box):
+        """
+        Vectorized closest-point computation.
+        points: (n_agents, 3)
+        box: [xmin, xmax, ymin, ymax, zmin, zmax]
+        Returns: (n_agents, 3)
+        """
+        xmin, xmax, ymin, ymax, zmin, zmax = box
+
+        closest = np.empty_like(points)
+        closest[:, 0] = np.clip(points[:, 0], xmin, xmax)
+        closest[:, 1] = np.clip(points[:, 1], ymin, ymax)
+        closest[:, 2] = np.clip(points[:, 2], zmin, zmax)
+
+        return closest
+
+    # --------------------------------------------------------
+    # 3D REPULSIVE FIELD
+    # --------------------------------------------------------
+    def compute_repulsive_velocity_multi(self, agents_pos,
+                                     influence_distance=3,
+                                     eta=1.0):
+        """
+        Vectorized repulsive velocity computation for multiple agents.
+        
+        agents_pos: (n_agents, 3)
+        Returns v_rep:   (n_agents, 3)
+        """
+        n_agents = agents_pos.shape[0]
+        v_rep = np.zeros((n_agents, 3))
+
+        for box in self.box_obs_list:
+            # get closest point for all agents (vectorized call)
+            closest = self.closest_point_on_box_batch(agents_pos, box)   # (n_agents, 3)
+
+            diff = agents_pos - closest
+            d = np.linalg.norm(diff, axis=1)  # (n_agents,)
+
+            # --- Agents inside obstacle -----------------------------------
+            inside = d < 1e-6
+            if np.any(inside):
+                px, py, pz = agents_pos[inside].T
+                xmin, xmax, ymin, ymax, zmin, zmax = box
+
+                dx_min = px - xmin
+                dx_max = xmax - px
+                dy_min = py - ymin
+                dy_max = ymax - py
+                dz_min = pz - zmin
+                dz_max = zmax - pz
+
+                distances = np.vstack([dx_min, -dx_max, dy_min, -dy_max, dz_min, -dz_max]).T
+                axis = np.argmax(np.abs(distances), axis=1)
+
+                push = np.zeros((inside.sum(), 3))
+                for k in range(axis.size):
+                    if axis[k] == 0: push[k,0] =  1
+                    if axis[k] == 1: push[k,0] = -1
+                    if axis[k] == 2: push[k,1] =  1
+                    if axis[k] == 3: push[k,1] = -1
+                    if axis[k] == 4: push[k,2] =  1
+                    if axis[k] == 5: push[k,2] = -1
+
+                v_rep[inside] += eta * 10 * push
+
+            # --- Standard repulsive field ---------------------------------
+            mask = (d < influence_distance) & (~inside)
+            if np.any(mask):
+                d_mask = d[mask]
+                diff_mask = diff[mask]
+
+                v_rep[mask] += eta * (1/d_mask - 1/influence_distance)[:,None] * \
+                            (1/d_mask**2)[:,None] * \
+                            (diff_mask / d_mask[:,None])
+
+        return v_rep
 
 
     # -----------------------------------------
