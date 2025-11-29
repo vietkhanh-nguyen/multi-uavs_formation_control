@@ -19,7 +19,7 @@ def mjc_sim_scenario_bearing_center_tracking_based():
     fps = 60
     num_drones = 12
     plot = None
-    render_video = True
+    render_video = False
     # build_map_summary()
     save_multi_drone_xml("mjcf/multiple_x2.xml", num_drones=num_drones)
     scenario = ScenarioBearingbasedCenterTrackingConsensus()
@@ -86,4 +86,4 @@ def mjc_sim_scenario_drone_tracking():
 
 
 if __name__ == "__main__":
-    mjc_sim_scenario_bearing_center_tracking_based()
+    mjc_sim_scenario_bearing_based()

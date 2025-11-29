@@ -1,14 +1,12 @@
 import numpy as np
 from controls.quadcopter_controller import QuadcopterPIDController
 from controls.consensus_controller import MultiAgentConsensus
-from controls.pure_pursuit import PurePursuit
-from path_planning.a_star_search import path_finding
-from utilities.gen_multi_agent_graph import *
 
 class ScenarioBearingbasedConsensus:
 
     def __init__(self):
         self.name = "Drones Formation using Bearing-based Consensus Algorithm"
+        self.e_bearing_tol = 1
 
     def init(self, sim, model, data):
 
@@ -17,11 +15,6 @@ class ScenarioBearingbasedConsensus:
         sim.cam.distance =  16
         sim.cam.lookat =np.array([ 0.0 , 0.0 , 0.0 ])
         
-        path = path_finding()
-        if path is None:
-            path = sim.pos_ref
-
-        self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=path)
         self.controllers = []
         self.formation_controller = MultiAgentConsensus(sim.num_drones, K=1)
 
@@ -30,42 +23,71 @@ class ScenarioBearingbasedConsensus:
 
         # PID for path following (để riêng)
         self.follow_controller = QuadcopterPIDController(sim.time_step)
-
-        self.tracking_flag = False
-        self.altitude_ref = 5 * np.ones(sim.num_drones)
-        self.not_landing_flag = True
+        self.t_prev = sim.data.time
+        self.operation_mode = "take_off"
 
     def update(self, sim, model, data):
 
-        X = np.zeros((sim.num_drones, 3))
-        for i in range(sim.num_drones):
-            pos = np.array(data.sensor(f'pos_{i}').data)
-            X[i, :] = pos
-            if abs(pos[2] - self.altitude_ref[i]) < 0.05:
-                self.tracking_flag = True
+        n_drones = sim.num_drones
+        dt = sim.data.time - self.t_prev
+        # --- Read current states ---
+        pos_full = np.zeros((n_drones, 3))
+        quat_full = np.zeros((n_drones, 4))
+        linvel_full = np.zeros((n_drones, 3))
+        angvel_full = np.zeros((n_drones, 3))
+        state_full = np.zeros((n_drones, 13))
+        acc_full = np.zeros((n_drones, 3))        
+        
+        for i in range(n_drones):
+            
+            pos_full[i, :] = np.array(data.sensor(f'pos_{i}').data)
+            quat_full[i, :] = np.array(data.sensor(f'quat_{i}').data)
+            linvel_full[i, :] = np.array(data.sensor(f'vel_{i}').data)
+            angvel_full[i, :] = np.array(data.sensor(f'gyro_{i}').data)
 
-        sim.cam.lookat = X.mean(axis=0)
-        sim.cam.azimuth += 0.1
+            vel = np.hstack((linvel_full[i, :], angvel_full[i, :]))
+            state_full[i, :] = np.concatenate([pos_full[i, :], quat_full[i, :], vel])
 
-        if sim.data.time > 30 and self.not_landing_flag:
-            self.not_landing_flag = False
-            self.formation_controller.X_ref = gen_rectangle(sim.num_drones, spacing=2.0, agents_per_row=3)
-            # X_ref = gen_sphere(self.n_agents, self.dim_state, radius=1)
-            diff = self.formation_controller.X_ref[:, np.newaxis, :] - self.formation_controller.X_ref[np.newaxis, :, :]
-            norm = np.linalg.norm(diff, axis=2, keepdims=True)
-            norm = np.where(norm == 0, 1e-9, norm)   # avoid divide-by-zero
-            self.formation_controller.dir_ref = -diff / norm
+            body_acc = np.array(data.sensor(f'acc_{i}').data) 
+            acc_full[i, :] = self.controllers[i].linear_acc_world(quat_full[i, :], body_acc)
+              
+        e_bearing = self.formation_controller.compute_bearing_error(pos_full)
+        e_bearing_norm = np.linalg.norm(e_bearing)
+        sim.cam.lookat = np.mean(pos_full, axis=0)
+        sim.cam.azimuth += .1 
 
-        e_bearing = self.formation_controller.compute_bearing_error(X)
-        print(f"time: {sim.data.time:.2f}, e_bearing: {np.linalg.norm(e_bearing):.2f}")
+        match self.operation_mode:
 
-        if (not self.not_landing_flag) and (np.linalg.norm(e_bearing) < 1):
-            self.altitude_ref = np.zeros(sim.num_drones)
+            case "take_off":
+                self.v_ref = np.zeros_like(pos_full)
+                self.altitude_ref = 5 * np.ones(sim.num_drones)
+                
+                if np.all(np.abs(pos_full[:, 2] - self.altitude_ref) < self.e_bearing_tol):
+                    self.operation_mode = "formation_icosahedron"
+                    self.altitude_ref = pos_full[:, 2]
+                    
 
-        if self.tracking_flag:
-            control_consensus = self.formation_controller.consensus_law(X)
-        else:
-            control_consensus = np.zeros_like(X)
+            case "formation_icosahedron":
+                control_consensus = self.formation_controller.consensus_law(pos_full)
+                self.v_ref = control_consensus       
+                self.altitude_ref += self.v_ref[:, 2] * dt
+
+                if e_bearing_norm < self.e_bearing_tol:
+                    self.operation_mode = "formation_rectangle"
+                    self.altitude_ref = pos_full[:, 2]
+                    self.formation_controller._init_states("rectangle")
+                
+            case "formation_rectangle":
+                control_consensus = self.formation_controller.consensus_law(pos_full)
+                self.v_ref = control_consensus    
+                self.altitude_ref += self.v_ref[:, 2] * dt
+
+                if (e_bearing_norm < self.e_bearing_tol):
+                    self.operation_mode = "landing"
+
+            case "landing":
+                self.v_ref = np.zeros_like(pos_full)
+                self.altitude_ref = np.zeros(n_drones)
 
         for i in range(sim.num_drones):
 
@@ -75,15 +97,14 @@ class ScenarioBearingbasedConsensus:
             angvel = data.sensor(f'gyro_{i}').data
             vel = np.hstack((linvel, angvel))
             state = np.concatenate([pos, quat, vel])
-            self.altitude_ref[i] += control_consensus[i, 2] * 0.01
-
-
 
             u = self.controllers[i].vel_control_algorithm(
                 state,
-                control_consensus[i, :2],
+                self.v_ref[i, :2],
                 self.altitude_ref[i],
             )
 
             for j in range(4):
                 data.actuator(f"thrust{j+1}_{i}").ctrl = u[j]
+
+        self.t_prev = sim.data.time

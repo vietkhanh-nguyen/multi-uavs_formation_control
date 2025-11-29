@@ -10,24 +10,22 @@ class ScenarioDroneTracking:
 
     def __init__(self):
         self.name = "Drone Tracking Trajectory"
+        start_pos = np.array([0.0, 0.0, 5.0])
+        end_pos = np.array([40.0, 40.0, 15.0])
+        self.path, self.env = path_finding(start_pos, end_pos)
 
     def init(self, sim, model, data):
-        """
-        Initialize controller and tracking references.
-        sim: MujocoSim object
-        """
 
         sim.cam.azimuth = 45.0 
         sim.cam.elevation = -30.0
         sim.cam.distance =  8.0
 
         # Plan path
-        path, env = path_finding()
-        if path is None:
-            path = sim.pos_ref  # fallback if path not found
+        if self.path is None:
+            self.path = sim.pos_ref  # fallback if path not found
 
         # Pure pursuit path tracker
-        self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=path)
+        self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=self.path, alpha=0.95)
 
         # PID controller for the drone
         self.controller = QuadcopterPIDController(sim.time_step)
@@ -43,12 +41,8 @@ class ScenarioDroneTracking:
         
 
     def update(self, sim, model, data):
-        """
-        Called at each simulation step.
-        sim: MujocoSim object
-        model: mj.MjModel
-        data: mj.MjData
-        """
+
+        print(sim.data.time)
         # Read sensors
         body_pos = np.array(data.sensor('body_pos').data)
         body_quat = np.array(data.sensor('body_quat').data)
@@ -69,10 +63,7 @@ class ScenarioDroneTracking:
         # Determine reference position
         if self.tracking_flag:
             pos_ref = self.path_tracking.look_ahead_point(body_pos)
-            print(
-                f"Pos_ref: {np.round(pos_ref, 2)}, "
-                f"Body_pos: {np.round(body_pos, 2)}"
-            )
+
         else:
             pos_ref = np.copy(body_pos)
             pos_ref[2] = self.altitude_ref_init
