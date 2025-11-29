@@ -2,11 +2,13 @@ import numpy as np
 
 class PurePursuit:
 
-    def __init__(self, look_ahead_dist, waypoints):
+    def __init__(self, look_ahead_dist, waypoints, alpha):
         self.look_ahead_dist = look_ahead_dist
         self.waypoints = waypoints
         self.ref_filtered = None         # filtered reference point
-        self.alpha = 0.9         
+        self.alpha = alpha     
+        self.waypoints_len = len(waypoints)
+        self.goal_flag = False   
 
     def look_ahead_point(self, pos_cur):
         # 1. Compute the raw lookahead point
@@ -30,5 +32,9 @@ class PurePursuit:
             self.ref_filtered = (
                 self.alpha * self.ref_filtered + (1 - self.alpha) * raw_ref
             )
+
+        goal_tol = 0.1  # meters
+        if np.linalg.norm(pos_cur[:3] - self.waypoints[-1]) < goal_tol:
+            self.goal_flag = True
 
         return self.ref_filtered

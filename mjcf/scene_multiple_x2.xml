@@ -19,6 +19,7 @@
   <!-- <option gravity="1 0 -10"></option> -->
   <include file="obstacles.xml"/>
   <include file="multiple_x2.xml"/>
+  <include file="waypoints.xml"/>
 
   <worldbody>
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>

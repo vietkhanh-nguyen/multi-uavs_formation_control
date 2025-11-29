@@ -7,20 +7,21 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 import matplotlib.animation as animation
 from mpl_toolkits.mplot3d import Axes3D 
-from utilities.gen_multi_agent_graph import build_universal_rigid_graph, gen_icosahedron, gen_sphere
+from utilities.gen_multi_agent_graph import build_universal_rigid_graph, gen_icosahedron, gen_sphere, gen_rectangle
 
 
 import numpy as np
 
 class MultiAgentConsensus:
-    def __init__(self, n_agents=7, K=1, graph_type="complete", dim_state=3):
+    def __init__(self, n_agents=7, K=1, graph_type="complete", center_virtual_agent=False):
         self.n_agents = n_agents
         self.K = K/self.n_agents
         self.impact_dis = 1
         self.muy = (1 + self.impact_dis**4)/self.impact_dis**4
         # Initialize system matrices
         self.graph_type = graph_type
-        self.dim_state = dim_state
+        self.dim_state = 3
+        self.n_virtual_agent = 2 if center_virtual_agent else 0
         self._init_matrices()
         self._init_states()
 
@@ -28,7 +29,7 @@ class MultiAgentConsensus:
     def _init_matrices(self):
         """Initialize Laplacian and dynamic matrices."""
         if self.graph_type == "complete":
-            A_graph = np.ones((self.n_agents, self.n_agents), dtype=int)
+            A_graph = np.ones((self.n_agents+self.n_virtual_agent , self.n_agents+self.n_virtual_agent ), dtype=int)
             np.fill_diagonal(A_graph, 0)
             self.num_edges = int(self.n_agents*(self.n_agents - 1)/2)
         elif self.graph_type == "universal_rigid":
@@ -40,19 +41,30 @@ class MultiAgentConsensus:
         self.A_graph = A_graph
 
     # ----------------------------------------------------------------------
-    def _init_states(self):
+    def _init_states(self, formation=None):
 
         # state now includes (x, y, z)
-        if self.n_agents != 12:
-            X_ref = gen_sphere(self.n_agents, self.dim_state, radius=1)
+        if formation == None:
+            if self.n_agents != 12:
+                X_ref = gen_sphere(self.n_agents, self.dim_state, radius=1)
+            else:
+                X_ref = gen_icosahedron(radius=5)
         else:
-            X_ref = gen_icosahedron(radius=5)
+            match formation:
+                case "icosahedron":
+                    X_ref = gen_icosahedron(radius=5)
+                case  "sphere":
+                    X_ref = gen_sphere(self.n_agents, self.dim_state, radius=1)
+                case "rectangle":
+                    X_ref = gen_rectangle(self.n_agents, spacing=0.8, agents_per_row=3)
+
         # X_ref = gen_sphere(self.n_agents, self.dim_state, radius=1)
         diff = X_ref[:, np.newaxis, :] - X_ref[np.newaxis, :, :]
         norm = np.linalg.norm(diff, axis=2, keepdims=True)
         norm = np.where(norm == 0, 1e-9, norm)   # avoid divide-by-zero
         self.dir_ref = -diff / norm
         self.X_ref = X_ref
+        
 
     def projection_matrix(self, gij):
         gij = np.asarray(gij).reshape(-1)
@@ -85,30 +97,28 @@ class MultiAgentConsensus:
 
         return self.K*u
     
-    def consensus_leader_vel_varying_law(self, X, dX, ddX, kp=1, kv=2):
+    def consensus_leader_vel_varying_law(self, X, dX, ddX, kp=1, kv=2, ka=3, kadv=1):
+
         diff_matrix = X[:, np.newaxis, :] - X[np.newaxis, :, :]
         dist_matrix = np.linalg.norm(diff_matrix, axis=2, keepdims=True)
         dist_matrix = np.where(dist_matrix == 0, 1e-9, dist_matrix)   # avoid divide-by-zero
-        dist_matrix = dist_matrix.reshape(self.n_agents, self.n_agents)
+        dist_matrix = dist_matrix.reshape(self.n_agents + self.n_virtual_agent , self.n_agents + self.n_virtual_agent)
 
         u = np.zeros((self.n_agents, self.dim_state)) 
         K_mat = np.zeros((self.n_agents, self.dim_state, self.dim_state)) 
+
         for i in range(self.n_agents):
-
             u_avoid_obs = np.zeros(self.dim_state)
-            for j in range(self.n_agents):
-
+            for j in range(self.n_agents + self.n_virtual_agent):
                 e = dist_matrix[i, j]**2 - self.impact_dis**2
-                if e <= 0 and i != j:
+                if e <= 0 and i != j and j!=self.n_agents:
                     dBij = (-4*self.muy*e)/(1 + e**2)**2 * diff_matrix[i, j, :]
                     u_avoid_obs += dBij / (1 - self.muy*(e**2 / (1 + e**2)))
 
                 if self.A_graph[i, j] == 0:
                     continue  
                 Pgij_ref = self.projection_matrix(self.dir_ref[i, j, :])
-                # u[i] += Pgij_ref@(kp*(X[i, :] - X[j, :]) + kv*(dX[i, :] - dX[j, :]) - ddX[j, :])
                 ep = X[i, :] - X[j, :]
-                # u[i] += Pgij_ref@(kp*np.sign(ep)*np.abs(ep)**.5 + kv*(dX[i, :] - dX[j, :]) - ddX[j, :])
                 norm = np.linalg.norm(ep)
                 # Choose vector based on norm
                 if norm > 1:
@@ -118,9 +128,9 @@ class MultiAgentConsensus:
                         vec = ep / norm
                     else:
                         vec = np.zeros_like(ep)  # if X[i]==X[j]
-                u[i] += Pgij_ref@(kp*vec + kv*(dX[i, :] - dX[j, :]) - ddX[j, :])
+                u[i] += Pgij_ref@(kp*vec + kv*(dX[i, :] - dX[j, :]) - ka*ddX[j, :])
                 K_mat[i, :, :] += Pgij_ref
-            u[i] = -np.linalg.pinv(K_mat[i, :, :]) @ u[i] + 2*u_avoid_obs
+            u[i] = -np.linalg.pinv(K_mat[i, :, :]) @ u[i] + kadv*u_avoid_obs
         return self.K*u
     
     def avoid_collision_law(self, dist_matrix, X, i):
@@ -546,5 +556,5 @@ if __name__ == "__main__":
     print(f"Simulation finished in {t1 - t0:.2f} s")
 
     # Plot 3D trajectories
-    sim.plot_gif_3d(T, dt, max_frames=200)
+    # sim.plot_gif_3d(T, dt, max_frames=200)
 

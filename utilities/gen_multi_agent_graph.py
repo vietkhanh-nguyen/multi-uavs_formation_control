@@ -100,6 +100,7 @@ def gen_icosahedron(radius):
     # Normalize to radius = 0.5
     norms = np.linalg.norm(verts, axis=1)
     X_ref = radius * verts / norms[:, np.newaxis]
+    X_ref = np.vstack((X_ref, np.array([1.0, 1.0, 1.0]), np.array([[0.0, 0.0, 0.0]])))  
 
     return X_ref
 

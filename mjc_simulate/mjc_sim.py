@@ -14,6 +14,7 @@ class MujocoSim:
         abspath = os.path.join(dirname + "/" + xml_name)
 
         # MuJoCo data structures
+        self.scenario = scenario
         self.model = mj.MjModel.from_xml_path(abspath)  # MuJoCo model
         self.data = mj.MjData(self.model)                # MuJoCo data
         self.cam = mj.MjvCamera()                        # Abstract camera
@@ -21,18 +22,21 @@ class MujocoSim:
         self.xml_path = abspath
         self.simulation_time = simulation_time
         self.fps = fps
+        
         if time_step is not None:
             self.model.opt.timestep = time_step
         self.time_step = self.model.opt.timestep
+
 
         # Tracking state
         self.frames = None
         self.state = None
         self.temp = None
 
-        # Print camera config
+        # Print config
         self.print_camera_config = False #set to True to print camera config
                                          #this is useful for initializing view of the model)
+        self.print_sim_time = False
 
         # Receive key input
         self.button_left = False
@@ -45,7 +49,7 @@ class MujocoSim:
         self.num_drones = num_drones
 
         # Set up scenario
-        self.scenario = scenario
+        
         self.plot = plot
 
         
@@ -117,7 +121,7 @@ class MujocoSim:
         # Init GLFW, create window, make OpenGL context current, request v-sync
         glfw.init()
         glfw.window_hint(glfw.DECORATED, glfw.TRUE)
-        self.window = glfw.create_window(1200, 900, self.scenario.name, None, None)
+        self.window = glfw.create_window(512, 512, self.scenario.name, None, None)
         glfw.make_context_current(self.window)
         glfw.swap_interval(1)
 
@@ -141,8 +145,6 @@ class MujocoSim:
         glfw.set_scroll_callback(self.window, scroll)
 
 
-        
-
     def main_loop(self):
         self.set_up_ui()
 
@@ -163,6 +165,8 @@ class MujocoSim:
 
         while not glfw.window_should_close(self.window):
             time_prev = self.data.time
+            if self.print_sim_time:
+                print(self.data.time)
             while (self.data.time - time_prev < 1.0/60.0):
                 self.counter += 1
                 mj.mj_step(self.model, self.data)
@@ -183,6 +187,7 @@ class MujocoSim:
             # Update scene and render
             mj.mjv_updateScene(self.model, self.data, self.opt, None, self.cam,
                             mj.mjtCatBit.mjCAT_ALL.value, self.scene)
+
             mj.mjr_render(viewport, self.scene, self.context)
 
             # swap OpenGL buffers (blocking call due to v-sync)

@@ -113,13 +113,13 @@ class AStartSearch3D:
         self.grid = inflated
         self.map.grid_map_3d = inflated
 
-def path_finding():
+def path_finding(start_pos, end_pos):
     city = np.load("path_planning/city_env.npy", allow_pickle=True).item()
     env = MapGridEnvironment3D(city["map_size"], city["resolution"], city["box_obs_list"])
     env.generate_voxel_map()
     a_star = AStartSearch3D(map_env=env)
-    start_pos = np.array([0.0, 0.0, 5.0])
-    end_pos = np.array([60.0, 60.0, 15.0])
+    # start_pos = np.array([0.0, 0.0, 5.0])
+    # end_pos = np.array([10.0, 10.0, 15.0])
     if env.is_inside_box(start_pos) or env.is_inside_box(end_pos):
         return False, None
     a_star.define_start_end_node(start_pos, end_pos)
@@ -142,6 +142,7 @@ if __name__ == "__main__":
     a_star.define_start_end_node(start_pos, end_pos)
     a_star.inflate_obstacles(3.0)
     path = a_star.search()
+    print(path.shape)
     np.save("path_planning/astar_path.npy", path)
     myplot = MyPlot() 
     myplot.plot_3d_map(city["box_obs_list"], city["map_size"], elev=25, azim=45, waypoints=path)

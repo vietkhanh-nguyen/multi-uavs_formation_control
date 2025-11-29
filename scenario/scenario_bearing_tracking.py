@@ -1,29 +1,36 @@
 import numpy as np
+import mujoco as mj
 from controls.quadcopter_controller import QuadcopterPIDController
 from controls.consensus_controller import MultiAgentConsensus
 from controls.pure_pursuit import PurePursuit
 from path_planning.env import MapGridEnvironment3D
 from path_planning.a_star_search import path_finding
 from utilities.gen_multi_agent_graph import *
+from utilities.visualize_waypoint import write_waypoints_xml
 
 class ScenarioBearingbasedTrackingConsensus:
 
     def __init__(self):
         self.name = "Drones Formation using Bearing-based Consensus Algorithm"
+        start_pos = np.array([0.0, 0.0, 5.0])
+        end_pos = np.array([40.0, 40.0, 15.0])
+        self.path, self.env = path_finding(start_pos, end_pos)
+        self.e_bearing_tol = 1
+        self.formation_scale = 0.35
+        write_waypoints_xml(self.path, "mjcf/waypoints.xml")
 
     def init(self, sim, model, data):
-
-        sim.cam.azimuth = 15
-        sim.cam.elevation = -67
-        sim.cam.distance =  32
-        sim.cam.lookat =np.array([ 0.0 , 0.0 , 0.0 ])
+        write_waypoints_xml(None, "mjcf/waypoints.xml")
+        sim.cam.azimuth = 60
+        sim.cam.elevation = -38
+        sim.cam.distance =  9.5
+        sim.cam.lookat =np.array([0.0 , 0.0 , 0.0])
         
-        path, env = path_finding()
-        self.env = env
-        if path is None:
-            path = sim.pos_ref
 
-        self.path_tracking = PurePursuit(look_ahead_dist=1, waypoints=path)
+        if self.path is None:
+            self.path = sim.pos_ref
+
+        self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=self.path, alpha=0.95)
         self.controllers = []
         self.formation_controller = MultiAgentConsensus(sim.num_drones, K=2, graph_type="complete")
 
@@ -37,112 +44,125 @@ class ScenarioBearingbasedTrackingConsensus:
         self.tracking_flag = False
         self.formation_flag = False
         self.not_landing_flag = True
-        self.altitude_ref = 5 * np.ones(sim.num_drones)
+        
         self.t_prev = sim.data.time
         self.v_ref = np.zeros((sim.num_drones, 3))
-        self.scale = 0.4
+        
+        self.X_virtual = np.array([-1, -1, 0])
+        self.dX_virtual = np.array([0, 0, 0])
+        self.ddX_virtual = np.array([0, 0, 0])
+
+        self.operation_mode = "take_off" 
 
     def update(self, sim, model, data):
+
         n_drones = sim.num_drones
         dt = sim.data.time - self.t_prev
-        print(sim.data.time)
         # --- Read current states ---
-        X = np.zeros((n_drones, 3))
-        dX = np.zeros((n_drones, 3))
-        ddX = np.zeros((n_drones, 3))
+        pos_full = np.zeros((n_drones, 3))
+        quat_full = np.zeros((n_drones, 4))
+        linvel_full = np.zeros((n_drones, 3))
+        angvel_full = np.zeros((n_drones, 3))
+        state_full = np.zeros((n_drones, 13))
+        acc_full = np.zeros((n_drones, 3))        
+        
         for i in range(n_drones):
-            # print(i)
-            quat = np.array(data.sensor(f'quat_{i}').data)
-            X[i, :] = np.array(data.sensor(f'pos_{i}').data)
-            dX[i, :] = np.array(data.sensor(f'vel_{i}').data)
+            
+            pos_full[i, :] = np.array(data.sensor(f'pos_{i}').data)
+            quat_full[i, :] = np.array(data.sensor(f'quat_{i}').data)
+            linvel_full[i, :] = np.array(data.sensor(f'vel_{i}').data)
+            angvel_full[i, :] = np.array(data.sensor(f'gyro_{i}').data)
+
+            vel = np.hstack((linvel_full[i, :], angvel_full[i, :]))
+            state_full[i, :] = np.concatenate([pos_full[i, :], quat_full[i, :], vel])
+
             body_acc = np.array(data.sensor(f'acc_{i}').data) 
-            ddX[i, :] = self.controllers[i].linear_acc_world(quat, body_acc)
-            if abs(X[i, 2] - self.altitude_ref[i]) < 0.05:
-                self.formation_flag = True
-        # print(ddX[0, :])
-        # --- Check if all drones reached altitude reference ---
-        # self.tracking_flag = np.any(np.abs(X[:, 2] - self.altitude_ref) < 0.5) and 
-        e_bearing = self.formation_controller.compute_bearing_error(X)
-
-        if sim.data.time > 340 and self.not_landing_flag:
-            self.not_landing_flag = False
-            self.formation_controller.X_ref = gen_rectangle(sim.num_drones, spacing=0.8, agents_per_row=3)
-            # X_ref = gen_sphere(self.n_agents, self.dim_state, radius=1)
-            diff = self.formation_controller.X_ref[:, np.newaxis, :] - self.formation_controller.X_ref[np.newaxis, :, :]
-            norm = np.linalg.norm(diff, axis=2, keepdims=True)
-            norm = np.where(norm == 0, 1e-9, norm)   # avoid divide-by-zero
-            self.formation_controller.dir_ref = -diff / norm
-            self.altitude_ref = X[:, 2]
-            self.scale = 1
-
-        # print(f"time: {sim.data.time:.2f}, e_bearing: {np.linalg.norm(e_bearing):.2f}")
-        if np.linalg.norm(e_bearing) < 10:
-            self.tracking_flag = True
-
-        if (not self.not_landing_flag) and (np.linalg.norm(e_bearing) < 1):
-            self.altitude_ref = self.controllers[0].low_pass_filter(np.zeros(sim.num_drones), self.altitude_ref, alpha=0.5)
+            acc_full[i, :] = self.controllers[i].linear_acc_world(quat_full[i, :], body_acc)
+            
+                
+        e_bearing = self.formation_controller.compute_bearing_error(pos_full)
+        e_bearing_norm = np.linalg.norm(e_bearing)
+        v_rep = self.env.compute_repulsive_velocity_multi(pos_full, influence_distance=1, eta=0.001)
 
 
-            # self.tracking_flag = False
-        # print(np.linalg.norm(e_bearing))
+        match self.operation_mode:
+
+            case "take_off":
+                self.v_ref = np.zeros_like(pos_full)
+                self.altitude_ref = 5 * np.ones(sim.num_drones)
+                
+                if np.all(np.abs(pos_full[:, 2] - self.altitude_ref) < 0.05):
+                    self.operation_mode = "formation_icosahedron"
+                    self.altitude_ref = pos_full[:, 2]
+                    
+
+            case "formation_icosahedron":
+                control_consensus = self.formation_controller.consensus_law(pos_full)
+                self.v_ref = control_consensus + v_rep       
+                self.altitude_ref += self.v_ref[:, 2] * dt
+
+                if e_bearing_norm < self.e_bearing_tol:
+                    self.operation_mode = "cruise"
+                    self.altitude_ref = pos_full[:, 2]
+                    self.formation_scale = 0.3
+                
+            case "cruise":
+                control_consensus = self.formation_controller.consensus_leader_vel_varying_law(
+                    pos_full, linvel_full, acc_full, kp=100, kv=200, ka=2, kadv=20
+                )
+                self.v_ref = self.leader_controller[0].low_pass_filter(
+                    self.v_ref + v_rep + control_consensus*dt, self.v_ref, alpha=0.2
+                )      
+                self.altitude_ref = self.leader_controller[0].low_pass_filter(
+                    self.altitude_ref + self.v_ref[:, 2] * dt, self.altitude_ref, alpha=0.2
+                )
+
+                if (self.path_tracking.goal_flag) and (e_bearing_norm < self.e_bearing_tol):
+                    self.operation_mode = "formation_rectangle"
+                    self.altitude_ref = pos_full[:, 2]
+                    self.formation_controller._init_states("rectangle")
+
+            case "formation_rectangle":
+                control_consensus = self.formation_controller.consensus_law(pos_full)
+                self.v_ref = control_consensus + v_rep       
+                self.altitude_ref += self.v_ref[:, 2] * dt
+
+                if (self.path_tracking.goal_flag) and (e_bearing_norm < self.e_bearing_tol):
+                    self.operation_mode = "landing"
+
+            case "landing":
+                self.v_ref = np.zeros_like(pos_full)
+                self.altitude_ref = np.zeros(n_drones)
+
+
         # --- Update camera once per timestep ---
-        sim.cam.lookat = X.mean(axis=0)
+        sim.cam.lookat = pos_full.mean(axis=0)
         # sim.cam.azimuth += 0.1
 
-        v_rep = self.env.compute_repulsive_velocity_multi(X, influence_distance=1, eta=0.01)
-
-        # --- Compute formation control ---
-        control_consensus = np.zeros_like(X)
-        if self.tracking_flag and self.not_landing_flag:
-            control_consensus = self.formation_controller.consensus_leader_vel_varying_law(
-                X, dX, ddX, kp=100, kv=200
-            )  # returns acceleration commands
-            # --- Integrate reference velocity and altitude ---
-            # self.v_ref += control_consensus*dt
-            self.v_ref = self.controllers[0].low_pass_filter(self.v_ref + v_rep + control_consensus*dt, self.v_ref, alpha=0.1)      
-            self.altitude_ref = self.controllers[0].low_pass_filter(self.altitude_ref + self.v_ref[:, 2] * dt, self.altitude_ref, alpha=0.5)
-        elif self.formation_flag:
-            control_consensus = self.formation_controller.consensus_law(X)
-            self.v_ref = control_consensus + v_rep       
-            self.altitude_ref += self.v_ref[:, 2] * dt
-
+        
 
         # --- Compute individual drone control ---
         # print(np.array(data.sensor(f'pos_{0}').data))
         for i in range(n_drones):
-            pos = np.array(data.sensor(f'pos_{i}').data)
-            quat = np.array(data.sensor(f'quat_{i}').data)
-            linvel = np.array(data.sensor(f'vel_{i}').data)
-            angvel = np.array(data.sensor(f'gyro_{i}').data)
-            vel = np.hstack((linvel, angvel))
-            state = np.concatenate([pos, quat, vel])
-
-            # Compute velocity-based control
-            
-            self.v_ref = self.controllers[0].low_pass_filter(self.v_ref + v_rep, self.v_ref, alpha=0.1)      
-            
+            # Compute velocity-based control  
             u = self.controllers[i].vel_control_algorithm(
-                state,
+                state_full[i, :],
                 self.v_ref[i, :2],      # full 3D velocity reference
                 self.altitude_ref[i]
             )
-            # Leader 1 drone follows the leader 0 to form the scale
-            if i == 2 and self.tracking_flag and self.not_landing_flag:
-                pos_0 = np.array(data.sensor(f'pos_{0}').data)
+
+            if i == 0 and self.operation_mode == "cruise":
+                pos_ref = self.path_tracking.look_ahead_point(pos_full[0, :])    
+                u = self.leader_controller[0].pos_control_algorithm(state_full[i, :], pos_ref+ v_rep[i, :]*dt)
+
+            # Leader 1 drone follows the leader 0 to form the formation_scale
+            if i == 2 and self.operation_mode == "cruise":
                 ref_dir = (self.formation_controller.X_ref[i] - self.formation_controller.X_ref[0])
-                pos_ref_2 = pos_0 + (self.scale * ref_dir)
-                # self.leader_controller[1].Kp_pos = .01
-                u = self.leader_controller[1].pos_control_algorithm(state, pos_ref_2)
+                pos_ref_2 = pos_full[0, :] + (self.formation_scale * ref_dir)
+                u = self.leader_controller[1].pos_control_algorithm(state_full[i, :], pos_ref_2 + linvel_full[i, :]*dt)
                 
-            if i == 0 and self.tracking_flag and self.not_landing_flag:
-                pos_ref = self.path_tracking.look_ahead_point(pos)
-                pos_ref = self.leader_controller[0].low_pass_filter(pos_ref, pos, alpha=0.99)      
-                # pos_ref = np.array([3, -2.5, 10])
-                # self.leader_controller[0].Kp_pos = .1
-                if not self.not_landing_flag:
-                    pos_ref[2] = self.altitude_ref[0]
-                u = self.leader_controller[0].pos_control_algorithm(state, pos_ref)
-            
+
+
             # Apply control to actuators
             for j in range(4):
                 data.actuator(f"thrust{j+1}_{i}").ctrl = u[j]
