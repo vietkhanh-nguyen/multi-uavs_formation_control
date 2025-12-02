@@ -7,6 +7,8 @@ from path_planning.env import MapGridEnvironment3D
 from path_planning.a_star_search import path_finding
 from utilities.gen_multi_agent_graph import *
 from utilities.visualize_waypoint import write_waypoints_xml
+from plots.track_sim_data import TrackData
+from plots.plot_sim_data import PlotData
 
 class ScenarioBearingbasedCenterTrackingConsensus:
 
@@ -16,8 +18,10 @@ class ScenarioBearingbasedCenterTrackingConsensus:
         end_pos = np.array([40.0, 40.0, 15.0])
         self.path, self.env = path_finding(start_pos, end_pos)
         self.e_bearing_tol = 1
-        self.formation_scale = 0.35
+        self.scale = 1
+        self.formation_scale = 1.0
         write_waypoints_xml(self.path, "mjcf/waypoints.xml")
+        
 
     def init(self, sim, model, data):
         write_waypoints_xml(None, "mjcf/waypoints.xml")
@@ -26,15 +30,18 @@ class ScenarioBearingbasedCenterTrackingConsensus:
         sim.cam.distance =  9.5
         sim.cam.lookat =np.array([0.0 , 0.0 , 0.0])
         
-
         if self.path is None:
             self.path = sim.pos_ref
+
+        self.tracker_data = TrackData(sim.num_drones, sim.model.opt.timestep, sim.simulation_time)
+        self.tracker_data.track_waypoints(self.path)
 
         self.path_tracking = PurePursuit(look_ahead_dist=3, waypoints=self.path, alpha=0.95)
         self.controllers = []
         self.formation_controller = MultiAgentConsensus(
             sim.num_drones, K=2, graph_type="complete", center_virtual_agent=True
         )
+        self.tracker_data.track_scale_ref_norm(self.formation_controller.X_ref)
 
         for _ in range(sim.num_drones):
             self.controllers.append(QuadcopterPIDController(sim.time_step))
@@ -49,8 +56,6 @@ class ScenarioBearingbasedCenterTrackingConsensus:
         
         self.t_prev = sim.data.time
         self.v_ref = np.zeros((sim.num_drones, 3))
-
-
 
         self.operation_mode = "take_off" 
 
@@ -84,7 +89,6 @@ class ScenarioBearingbasedCenterTrackingConsensus:
         e_bearing_norm = np.linalg.norm(e_bearing)
         v_rep = self.env.compute_repulsive_velocity_multi(pos_full, influence_distance=1, eta=0.001)
 
-
         match self.operation_mode:
 
             case "take_off":
@@ -105,7 +109,7 @@ class ScenarioBearingbasedCenterTrackingConsensus:
                     self.operation_mode = "cruise"
                     self.altitude_ref = pos_full[:, 2]
                     self.t0 = sim.data.time 
-                    self.formation_scale = 0.5
+                    self.formation_scale = 0.6
                     self.X_virtual = np.mean(pos_full, axis=0)
                     self.dX_virtual = np.array([0.0, 0.0, 0.0])
                     self.ddX_virtual = np.array([0.0, 0.0, 0.0])
@@ -127,7 +131,8 @@ class ScenarioBearingbasedCenterTrackingConsensus:
                 self.altitude_ref = self.leader_controller[0].low_pass_filter(
                     self.altitude_ref + self.v_ref[:, 2] * dt, self.altitude_ref, alpha=0.2
                 )
-
+                scale_varying = (1 - self.formation_scale)*np.exp(-(sim.data.time - self.t0))
+                self.scale = self.formation_scale + scale_varying
                 if (self.path_tracking.goal_flag) and (e_bearing_norm < self.e_bearing_tol):
                     self.operation_mode = "formation_rectangle"
                     self.altitude_ref = pos_full[:-2, 2]
@@ -145,7 +150,7 @@ class ScenarioBearingbasedCenterTrackingConsensus:
                 self.v_ref = np.zeros_like(pos_full)
                 self.altitude_ref = np.zeros(n_drones)
 
-
+        self.tracker_data.track_state_full(sim.data.time, self.operation_mode, state_full, e_bearing, self.scale)
         # --- Update camera once per timestep ---
         sim.cam.lookat = pos_full.mean(axis=0)
         sim.cam.azimuth += 0.1
@@ -170,8 +175,8 @@ class ScenarioBearingbasedCenterTrackingConsensus:
 
 
                 scale_varying = (1 - self.formation_scale)*np.exp(-(sim.data.time - self.t0))
-                self.ddX_virtual_2 = self.ddX_virtual + self.formation_controller.X_ref[-2]*scale_varying
-                self.dX_virtual_2 = self.dX_virtual - self.formation_controller.X_ref[-2]*scale_varying
+                self.ddX_virtual_2 = self.ddX_virtual + self.formation_controller.X_ref[-2]*scale_varying*0
+                self.dX_virtual_2 = self.dX_virtual - self.formation_controller.X_ref[-2]*scale_varying*0
                 self.X_virtual_2 = self.X_virtual + self.formation_controller.X_ref[-2]*(self.formation_scale + scale_varying)
 
             # Leader 1 drone follows the leader 0 to form the formation_scale
