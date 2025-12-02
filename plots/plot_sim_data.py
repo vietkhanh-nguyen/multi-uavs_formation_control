@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from plots.track_sim_data import TrackData
 
-class MyPlot:
+class PlotData:
 
     def plot_3d_map(self, box_obs_list, map_size, elev=25, azim=45, waypoints=None):
         """
@@ -105,6 +106,95 @@ class MyPlot:
         axs[1].set_title("Position Tracking Over Time")
         axs[1].legend()
         axs[1].grid(True)
+
+        plt.tight_layout()
+        plt.show()
+
+    def plot_sim_multi_drones(self, tracker:TrackData):
+        """
+        Plot multi-UAV simulation results:
+        - 3D centroid trajectory and waypoints
+        - Initial and final positions
+        - Scale over time
+        - Bearing errors over time
+        """
+
+        t = tracker.t
+        centroid = tracker.centroid
+        scale = tracker.scale
+        scale_ref = tracker.scale_ref
+        n_edges = tracker.e_ij_norms.shape[0]
+        e_norms = tracker.e_ij_norms
+        n_drones = tracker.n_drones
+
+        # -----------------------------------
+        # 3D plot: centroid, initial & final positions, waypoints
+        # -----------------------------------
+        fig = plt.figure(figsize=(12, 5))
+        ax1 = fig.add_subplot(121, projection='3d')
+        
+        # Plot centroid trajectory
+        ax1.plot(centroid[0], centroid[1], centroid[2], color='b', linewidth=2, label='Centroid')
+
+        # Plot initial positions
+        print(tracker.state_full.shape)
+
+        
+        print(tracker.moment_operation)
+        for i in range(len(tracker.moment_operation)):
+            pos = tracker.state_full[:, :3, tracker.moment_operation[i]]
+            ax1.scatter(pos[:,0], pos[:,1], pos[:,2], s=60)
+
+        # Optional: waypoints
+        if hasattr(tracker, "waypoints") and tracker.waypoints is not None:
+            wp = np.array(tracker.waypoints)
+            ax1.plot(wp[:,0], wp[:,1], wp[:,2], color='k', linewidth=2, linestyle='--', label='Waypoints')
+
+        x_limits = [np.min(tracker.state_full[:, 0, :]), np.max(tracker.state_full[:, 0, :])]
+        y_limits = [np.min(tracker.state_full[:, 1, :]), np.max(tracker.state_full[:, 1, :])]
+        z_limits = [np.min(tracker.state_full[:, 2, :]), np.max(tracker.state_full[:, 2, :])]
+
+        # Find the middle and max range
+        x_middle = np.mean(x_limits)
+        y_middle = np.mean(y_limits)
+        z_middle = np.mean(z_limits)
+
+        max_range = np.max([x_limits[1]-x_limits[0], y_limits[1]-y_limits[0], z_limits[1]-z_limits[0]]) / 2
+
+        # Set equal limits around the middle
+        ax1.set_xlim(x_middle - max_range, x_middle + max_range)
+        ax1.set_ylim(y_middle - max_range, y_middle + max_range)
+        ax1.set_zlim(z_limits[0], z_limits[0] + 2*max_range)
+
+        ax1.set_xlabel("X")
+        ax1.set_ylabel("Y")
+        ax1.set_zlabel("Z")
+        ax1.set_title("UAV Centroid & Positions")
+        ax1.legend()
+        ax1.grid(True)
+
+
+        # -----------------------------------
+        # Subplots: scale and bearing errors
+        # -----------------------------------
+        ax2 = fig.add_subplot(222)
+        ax2.plot(t, tracker.centroid[0, :], color='r', linewidth=2,label="X")
+        ax2.plot(t, tracker.centroid[1, :], color='g', linewidth=2,label="Y")
+        ax2.plot(t, tracker.centroid[2, :], color='b', linewidth=2,label="Z")
+        ax2.legend()
+        
+        ax2.set_xlabel("Time [s]")
+        ax2.set_ylabel("Position")
+        ax2.set_title("Centroid Position Over Time")
+        ax2.grid(True)
+
+        ax3 = fig.add_subplot(224)
+        for k in range(n_edges):
+            ax3.plot(t, e_norms[k], linewidth=1)
+        ax3.set_xlabel("Time [s]")
+        ax3.set_ylabel("Bearing error ||e_ij||")
+        ax3.set_title("Bearing Errors Over Time")
+        ax3.grid(True)
 
         plt.tight_layout()
         plt.show()

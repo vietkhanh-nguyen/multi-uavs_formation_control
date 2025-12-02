@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
 import matplotlib.pyplot as plt
-from plots.my_plot import MyPlot
+from plots.plot_sim_data import PlotData
 
 class MapGridEnvironment3D:
 
@@ -204,7 +204,7 @@ class MapGridEnvironment3D:
 if __name__ == "__main__":
     city = np.load("path_planning/city_env.npy", allow_pickle=True).item()
     env = MapGridEnvironment3D(city["map_size"], city["resolution"], city["box_obs_list"])
-    myplot = MyPlot() 
+    myplot = PlotData() 
     grid = env.generate_voxel_map()
     env.save_numpy("voxel_map.npy")
     myplot.plot_3d_map(city["box_obs_list"], city["map_size"])
