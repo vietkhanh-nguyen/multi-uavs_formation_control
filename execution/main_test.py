@@ -167,10 +167,12 @@ class MujocoSim:
         
 
         def init_controller(model,data):
-            path, env = path_finding()
+            start_pos = np.array([0.0, 0.0, 5.0])
+            end_pos = np.array([40.0, 40.0, 15.0])
+            path, env = path_finding(start_pos, end_pos)
             if path is None:
                 path = self.pos_ref
-            self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=path)
+            self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=path, alpha=0.95)
             self.controllers = []
             self.formation_controller = MultiAgentConsensus(self.num_drones, K=1)
             for i in range(self.num_drones):
