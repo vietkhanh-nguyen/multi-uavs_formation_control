@@ -19,7 +19,7 @@ def mjc_sim_scenario_bearing_center_tracking_based():
     time_step = None
     fps = 25
     num_drones = 12
-    track_data = True
+    track_data = False
     render_video = False
     # build_map_summary()
     save_multi_drone_xml("mjcf/multiple_x2.xml", num_drones=num_drones)
