@@ -2,6 +2,7 @@ import numpy as np
 from controls.quadcopter_controller import QuadcopterPIDController
 from controls.pure_pursuit import PurePursuit
 from path_planning.a_star_search import path_finding
+from utilities.visualize_waypoint import write_waypoints_xml
 
 class ScenarioDroneTracking:
     
@@ -10,9 +11,10 @@ class ScenarioDroneTracking:
         start_pos = np.array([0.0, 0.0, 5.0])
         end_pos = np.array([40.0, 40.0, 15.0])
         self.path, self.env = path_finding(start_pos, end_pos)
+        write_waypoints_xml(self.path, "mjcf/waypoints.xml")
 
     def init(self, sim, model, data):
-
+        write_waypoints_xml(None, "mjcf/waypoints.xml")
         sim.cam.azimuth = 45.0 
         sim.cam.elevation = -30.0
         sim.cam.distance =  8.0
@@ -22,7 +24,7 @@ class ScenarioDroneTracking:
             self.path = sim.pos_ref  # fallback if path not found
 
         # Pure pursuit path tracker
-        self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=self.path, alpha=0.95)
+        self.path_tracking = PurePursuit(look_ahead_dist=2, waypoints=self.path, alpha=0.5)
 
         # PID controller for the drone
         self.controller = QuadcopterPIDController(sim.time_step)
@@ -38,7 +40,7 @@ class ScenarioDroneTracking:
         
 
     def update(self, sim, model, data):
-
+        
         print(sim.data.time)
         # Read sensors
         body_pos = np.array(data.sensor('body_pos').data)
@@ -52,6 +54,7 @@ class ScenarioDroneTracking:
 
         # Update camera to follow drone
         sim.cam.lookat = body_pos
+        sim.cam.azimuth += 0.1
 
         # Check if drone reached initial altitude
         if np.abs(body_pos[2] - self.altitude_ref_init) < 0.05:

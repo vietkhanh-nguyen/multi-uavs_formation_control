@@ -42,7 +42,7 @@ def mjc_sim_scenario_bearing_tracking_based():
     # build_map_summary()
     save_multi_drone_xml("mjcf/multiple_x2.xml", num_drones=num_drones)
     scenario = ScenarioBearingbasedTrackingConsensus()
-    if render_video:
+    if render_video: 
         render = MujocoRender(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         render.main_loop()
     else:
@@ -54,7 +54,7 @@ def mjc_sim_scenario_bearing_based():
     xml_path = '../mjcf/scene_multiple_x2.xml'
     simulation_time = 78 #simulation time
     time_step = None
-    fps = 60
+    fps = 60 
     num_drones = 12
     track_data = True
     render_video = False
@@ -70,7 +70,7 @@ def mjc_sim_scenario_bearing_based():
 
 def mjc_sim_scenario_drone_tracking():
     xml_path = '../mjcf/scene.xml' #xml file (assumes this is in the same folder as this file)
-    simulation_time = 200 #simulation time
+    simulation_time = 115 #simulation time
     time_step = None
     fps = 25
     num_drones = 1
@@ -87,4 +87,4 @@ def mjc_sim_scenario_drone_tracking():
 
 
 if __name__ == "__main__":
-    mjc_sim_scenario_bearing_center_tracking_based()
+    mjc_sim_scenario_drone_tracking()
