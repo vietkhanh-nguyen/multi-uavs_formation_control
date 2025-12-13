@@ -2,11 +2,11 @@ import os
 import mujoco as mj
 from mujoco.glfw import glfw
 import os
-import pickle
+
 
 class MujocoSim:
 
-    def __init__(self, xml_name, num_drones, simulation_time, time_step, fps, scenario, track_data):
+    def __init__(self, xml_name, num_drones, simulation_time, time_step, fps, scenario):
 
         #get the full path
         dirname = os.path.dirname(__file__)
@@ -49,7 +49,6 @@ class MujocoSim:
 
         # Set up scenario
         
-        self.track_data = track_data
 
         
 
@@ -194,11 +193,8 @@ class MujocoSim:
 
             # process pending GUI events, call GLFW callbacks
             glfw.poll_events()
-        if hasattr(self.scenario, "tracker_data") and self.track_data:
-            with open("outputs/tracker_data.pkl", "wb") as f:
-                self.scenario.tracker_data.remove_unused_space()
-                pickle.dump(self.scenario.tracker_data, f)
-                print("Save data successfully")
+
+        self.scenario.finish()
         glfw.terminate()
 
 

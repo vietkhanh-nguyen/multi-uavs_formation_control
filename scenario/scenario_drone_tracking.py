@@ -73,3 +73,6 @@ class ScenarioDroneTracking:
 
         # Apply control to actuators
         data.ctrl[:] = control_input
+
+    def finish(self):
+        return

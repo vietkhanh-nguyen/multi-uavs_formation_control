@@ -170,3 +170,5 @@ class ScenarioBearingbasedTrackingConsensus:
         # --- Update previous time ---
         self.t_prev = sim.data.time
 
+    def finish(self):
+        return
