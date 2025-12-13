@@ -24,10 +24,9 @@ The project includes:
 - `pure_pursuit.py` – reference tracking via look-ahead policy  
 
 ### Scenario-Based Simulation (scenario/)
-- Bearing-only tracking  
-- Drone tracking  
-- Center tracking for multi-agent formations  
-- Ready-to-run mission scripts  
+- Drone tracking waypoints
+- Bearing-only control
+- Bearing-only tracking waypoints control
 
 ### MuJoCo (MJCF) Simulation (mjcf/, mjc_simulate/)
 - Custom MJCF model of Skydio X2  
@@ -38,11 +37,6 @@ The project includes:
 - Fully custom A* implementation  
 - Grid environment generator  
 - Path visualization tools  
-
-### Plotting & Post-Processing (plots/)
-- Simulation trajectory plotting  
-- Control input visualization  
-- Tracking error visualization  
 
 ### Utilities (utilities/)
 - Multi-drone waypoint generator  
@@ -56,7 +50,7 @@ The project includes:
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/vietkhanh-nguyen/quadcopter_skydio_x2.git
+git clone https://github.com/vietkhanh-nguyen/multi-uavs_formation_control.git
 cd quadcopter_skydio_x2
 ```
 

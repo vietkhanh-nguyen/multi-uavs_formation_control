@@ -22,6 +22,7 @@
 
   <include file="x2.xml"/>
   <include file="obstacles.xml"/>
+  <include file="waypoints.xml"/>
 
 
   <worldbody>

@@ -151,6 +151,7 @@ class ScenarioBearingbasedCenterTrackingConsensus:
                 self.altitude_ref = np.zeros(n_drones)
 
         self.tracker_data.track_state_full(sim.data.time, self.operation_mode, state_full, e_bearing, self.scale)
+        
         # --- Update camera once per timestep ---
         sim.cam.lookat = pos_full.mean(axis=0)
         sim.cam.azimuth += 0.1

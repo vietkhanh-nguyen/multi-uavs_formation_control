@@ -1,0 +1,5 @@
+imageio==2.37.2
+matplotlib==3.10.8
+mujoco==3.3.7
+numpy==2.3.5
+scipy==1.16.3
