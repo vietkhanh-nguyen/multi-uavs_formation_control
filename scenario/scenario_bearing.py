@@ -108,3 +108,6 @@ class ScenarioBearingbasedConsensus:
                 data.actuator(f"thrust{j+1}_{i}").ctrl = u[j]
 
         self.t_prev = sim.data.time
+
+    def finish(self):
+        return

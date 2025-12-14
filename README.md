@@ -1,6 +1,6 @@
 # Skydio X2 Multi-Agent Simulation Framework
 
-This repository is part of my Master’s personal project, where I explore topics in drone simulation, multi-agent control, and autonomous navigation. I built this project to document what I learned, experiment with ideas I find interesting, and share my code with anyone who is also passionate about drones, robotics, and control systems. This repository provides a complete framework for **multi-drone simulation**, **formation control**, **pure pursuit tracking**, and **path planning** using **MuJoCo (MJCF)** and Python.  
+This repository is part of my Master’s personal project, where I explore topics in drone simulation, multi-agent control, and autonomous navigation. I built this project to document what I learned, experiment with ideas I find interesting, and share my code with anyone who is also passionate about drones, robotics, and control systems. This repository provides a complete framework for **multi-drone simulation**, **formation control**, **pure pursuit tracking**, and **path planning** using **MuJoCo** and Python.  
 The project includes:
 
 - Multi-agent control modules (consensus, quadcopter control, pure pursuit)
@@ -11,9 +11,8 @@ The project includes:
 - A full report documenting methodology
 
 <p align="center">
-  <img src="outputs/Multi-UAVs.png" width="100%">
+  <img src="outputs/bearing_tracking.gif" width="100%">
 </p>
-
 ---
 
 ## Features
@@ -28,10 +27,10 @@ The project includes:
 - Bearing-only control
 - Bearing-only tracking waypoints control
 
-### MuJoCo (MJCF) Simulation (mjcf/, mjc_simulate/)
+### MuJoCo Simulation (mjcf/, mjc_simulate/)
 - Custom MJCF model of Skydio X2  
 - Multi-agent scenes  
-- Scripts for real-time MJCF simulation and rendering  
+- Scripts for real-time mujoco simulation and rendering  
 
 ### Path Planning (path_planning/)
 - Fully custom A* implementation  
@@ -69,5 +68,28 @@ A complete project report explaining the algorithms and system design:
 docs/report_final.pdf
 ```
 
+## Manual Drone Control (Body Frame)
+- **Script:** `main_keyboard_x2.py`
+- **Description:** Allows for manual piloting of the drone using keyboard inputs. The controller operates in the **body frame**, meaning directional keys control velocity relative to the drone's current orientation (Forward, Backward, Left, Right), rather than global coordinates.
+- **Control Scheme:**
+
+| Category | Key | Action |
+| :--- | :--- | :--- |
+| **Horizontal Velocity** | **`Arrow UP`** | Increase Forward Velocity ($+v_x$) |
+| | **`Arrow DOWN`** | Increase Backward Velocity ($-v_x$) |
+| | **`Arrow LEFT`** | Increase Left Velocity ($+v_y$) |
+| | **`Arrow RIGHT`** | Increase Right Velocity ($-v_y$) |
+| **Altitude (Z)** | **`. >` (Period)** | Ascend (Increase Reference Height) |
+| | **`, <` (Comma)** | Descend (Decrease Reference Height) |
+| **Yaw (Heading)** | **`W`** | Face Forward ($0^\circ$) |
+| | **`Q` / `E`** | Rotate $\pm 45^\circ$ |
+| | **`A` / `D`** | Rotate $\pm 90^\circ$ (Left/Right) |
+| | **`Z` / `C`** | Rotate $\pm 135^\circ$ |
+| | **`X`** | Face Backward ($180^\circ$) |
+| **System** | **`Space`** | **Stop/Hover** (Resets velocities to 0) |
+| | **`Backspace`** | Reset Simulation Data |
+| | **`Esc`** | Close Simulation |
+
 ## Example Outputs
 Simulation results are located in `outputs/`
+

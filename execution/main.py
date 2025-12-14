@@ -14,7 +14,7 @@ from utilities.build_map import build_map_summary
 
 def mjc_sim_scenario_bearing_center_tracking_based():
     xml_path = '../mjcf/scene_multiple_x2.xml'
-    simulation_time = 155 #simulation time
+    simulation_time = 150 #simulation time
     # simulation_time = 30 #simulation time
     time_step = None
     fps = 25
@@ -28,7 +28,7 @@ def mjc_sim_scenario_bearing_center_tracking_based():
         render = MujocoRender(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         render.main_loop()
     else:
-        sim = MujocoSim(xml_path, num_drones, simulation_time, time_step, fps, scenario, track_data)
+        sim = MujocoSim(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         sim.main_loop()
 
 def mjc_sim_scenario_bearing_tracking_based():
@@ -38,7 +38,7 @@ def mjc_sim_scenario_bearing_tracking_based():
     fps = 25
     num_drones = 12
     track_data = None
-    render_video = True
+    render_video = False
     # build_map_summary()
     save_multi_drone_xml("mjcf/multiple_x2.xml", num_drones=num_drones)
     scenario = ScenarioBearingbasedTrackingConsensus()
@@ -46,7 +46,7 @@ def mjc_sim_scenario_bearing_tracking_based():
         render = MujocoRender(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         render.main_loop()
     else:
-        sim = MujocoSim(xml_path, num_drones, simulation_time, time_step, fps, scenario, track_data)
+        sim = MujocoSim(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         sim.main_loop()
 
 
@@ -56,7 +56,6 @@ def mjc_sim_scenario_bearing_based():
     time_step = None
     fps = 60 
     num_drones = 12
-    track_data = True
     render_video = False
     # build_map_summary()
     save_multi_drone_xml("mjcf/multiple_x2.xml", num_drones=num_drones)
@@ -65,7 +64,7 @@ def mjc_sim_scenario_bearing_based():
         render = MujocoRender(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         render.main_loop()
     else:
-        sim = MujocoSim(xml_path, num_drones, simulation_time, time_step, fps, scenario, track_data)
+        sim = MujocoSim(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         sim.main_loop()
 
 def mjc_sim_scenario_drone_tracking():
@@ -75,16 +74,15 @@ def mjc_sim_scenario_drone_tracking():
     fps = 25
     num_drones = 1
     render_video = False
-    track_data = None
     # build_map_summary()
     scenario = ScenarioDroneTracking()
     if render_video:
         render = MujocoRender(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         render.main_loop()
     else:
-        sim = MujocoSim(xml_path, num_drones, simulation_time, time_step, fps, scenario, track_data)
+        sim = MujocoSim(xml_path, num_drones, simulation_time, time_step, fps, scenario)
         sim.main_loop()
 
 
 if __name__ == "__main__":
-    mjc_sim_scenario_drone_tracking()
+    mjc_sim_scenario_bearing_tracking_based()

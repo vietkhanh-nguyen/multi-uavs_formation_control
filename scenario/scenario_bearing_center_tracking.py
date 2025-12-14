@@ -9,6 +9,7 @@ from utilities.gen_multi_agent_graph import *
 from utilities.visualize_waypoint import write_waypoints_xml
 from plots.track_sim_data import TrackData
 from plots.plot_sim_data import PlotData
+import pickle
 
 class ScenarioBearingbasedCenterTrackingConsensus:
 
@@ -20,6 +21,7 @@ class ScenarioBearingbasedCenterTrackingConsensus:
         self.e_bearing_tol = 1
         self.scale = 1
         self.formation_scale = 1.0
+        self.track_data_flag = True
         write_waypoints_xml(self.path, "mjcf/waypoints.xml")
         
 
@@ -195,3 +197,10 @@ class ScenarioBearingbasedCenterTrackingConsensus:
         # --- Update previous time ---
         self.t_prev = sim.data.time
 
+    def finish(self):
+        if not self.track_data_flag:
+            return
+        with open("outputs/tracker_data.pkl", "wb") as f:
+            self.tracker_data.remove_unused_space()
+            pickle.dump(self.tracker_data, f)
+            print("Save data successfully")
