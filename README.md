@@ -11,9 +11,8 @@ The project includes:
 - A full report documenting methodology
 
 <p align="center">
-  <img src="outputs/Multi-UAVs.png" width="100%">
+  <img src="outputs/bearing_tracking.gif" width="100%">
 </p>
-
 ---
 
 ## Features
